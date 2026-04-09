@@ -1,0 +1,25 @@
+# Handle line endings automatically for files detected as text
+# and perform LF normalization.
+* text=auto
+
+# Standard C# source files
+*.cs text diff=csharp
+*.axaml text xml
+*.xaml text xml
+*.csproj text xml
+*.sln text eol=crlf
+
+# Documentation files
+*.md text
+LICENSE text
+
+# Graphics and binary assets
+*.svg text
+*.ico binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.mp4 binary
+*.mkv binary
+*.mov binary
+*.avi binary
