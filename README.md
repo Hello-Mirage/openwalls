@@ -25,6 +25,12 @@ Openwalls is a powerful, lightweight, and intelligent desktop wallpaper engine d
 - Windows 10
 - Windows Server 2019+
 
+## Screenshots
+
+<img width="1919" height="1019" alt="image" src="https://github.com/user-attachments/assets/7b8bd805-6ffa-47e2-8b68-811b2cb1d00e" />
+
+
+
 ## Credits
 
 Created by Hello-Mirage.
