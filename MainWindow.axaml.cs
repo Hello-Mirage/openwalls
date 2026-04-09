@@ -13,6 +13,18 @@ using LibVLCSharp.Shared;
 
 namespace openwalls;
 
+// Custom Control to handle procedural rendering
+public class ProceduralCanvas : Control
+{
+    public ProceduralRenderer? Renderer { get; set; }
+    
+    public override void Render(DrawingContext context)
+    {
+        Renderer?.Render(context, Bounds.Size);
+        base.Render(context);
+    }
+}
+
 public partial class MainWindow : Window
 {
     private LibVLC? _libVLC;
@@ -20,9 +32,11 @@ public partial class MainWindow : Window
     private DispatcherTimer? _optimizationTimer;
     private bool _isOptimizationPaused = false;
     private uint _ownProcessId;
+    private WallpaperConfig _config = new();
     
     private int _screenWidth;
     private int _screenHeight;
+    private ProceduralRenderer? _proceduralRenderer;
 
     public MainWindow()
     {
@@ -56,6 +70,10 @@ public partial class MainWindow : Window
             }
         }
 
+        // Initialize Procedural Engine
+        _proceduralRenderer = new ProceduralRenderer(ProceduralLayer);
+        ProceduralLayer.Renderer = _proceduralRenderer;
+
         // Initialize LibVLC
         Core.Initialize();
         _libVLC = new LibVLC();
@@ -77,23 +95,15 @@ public partial class MainWindow : Window
         
         Win32Api.EnumWindows((hwnd, lParam) =>
         {
-            // 1. Core Visibility: Must be visible and NOT minimized
             if (!Win32Api.IsWindowVisible(hwnd) || Win32Api.IsIconic(hwnd)) return true;
-
-            // 2. Ignore our own process
             Win32Api.GetWindowThreadProcessId(hwnd, out uint pid);
             if (pid == _ownProcessId) return true;
 
-            // 3. NUCLEAR TITLE BLACKLIST
             StringBuilder titleBuilder = new StringBuilder(256);
             Win32Api.GetWindowText(hwnd, titleBuilder, titleBuilder.Capacity);
             string title = titleBuilder.ToString().Trim();
+            if (string.IsNullOrWhiteSpace(title) || title.Equals("Settings", StringComparison.OrdinalIgnoreCase)) return true;
 
-            // Ignore empty titles, whitespace titles, and the specific "Settings" culprit
-            if (string.IsNullOrWhiteSpace(title) || title.Equals("Settings", StringComparison.OrdinalIgnoreCase)) 
-                return true;
-
-            // 4. Taskbar Visibility Heuristic
             long exStyle = Win32Api.GetWindowLongPtr(hwnd, Win32Api.GWL_EXSTYLE).ToInt64();
             bool isAppWindow = (exStyle & Win32Api.WS_EX_APPWINDOW) != 0;
             bool isToolWindow = (exStyle & Win32Api.WS_EX_TOOLWINDOW) != 0;
@@ -102,13 +112,11 @@ public partial class MainWindow : Window
             bool isTaskbarWindow = isAppWindow || (!isToolWindow && owner == IntPtr.Zero);
             if (!isTaskbarWindow) return true;
 
-            // 5. Class Filter: Ignore system layers and Input Experience
             StringBuilder className = new StringBuilder(256);
             Win32Api.GetClassName(hwnd, className, className.Capacity);
             string cls = className.ToString();
             if (cls == "Progman" || cls == "WorkerW" || cls == "Shell_TrayWnd" || cls == "Windows.UI.Core.CoreWindow") return true;
 
-            // 6. Covering Check: Is it maximized or full-screen?
             var placement = new Win32Api.WINDOWPLACEMENT();
             placement.length = Marshal.SizeOf<Win32Api.WINDOWPLACEMENT>();
             Win32Api.GetWindowPlacement(hwnd, ref placement);
@@ -136,19 +144,38 @@ public partial class MainWindow : Window
 
         if (anyCovering && !_isOptimizationPaused)
         {
-            if (_mediaPlayer?.IsPlaying == true)
-            {
-                _mediaPlayer.Pause();
-                _isOptimizationPaused = true;
-                Console.WriteLine($"[OPTIMIZATION] Pausing for: {triggerInfo}");
-            }
+            PausePlayback(triggerInfo);
         }
         else if (!anyCovering && _isOptimizationPaused)
         {
-            _mediaPlayer?.Play();
-            _isOptimizationPaused = false;
-            Console.WriteLine("[OPTIMIZATION] Resuming (Desktop visible)");
+            ResumePlayback();
         }
+    }
+
+    private void PausePlayback(string info)
+    {
+        if (_mediaPlayer?.IsPlaying == true) _mediaPlayer.Pause();
+        _proceduralRenderer?.Stop(); // Stop procedural timer to save CPU
+        _isOptimizationPaused = true;
+        Console.WriteLine($"[OPTIMIZATION] Pausing for: {info}");
+    }
+
+    private void ResumePlayback()
+    {
+        _isOptimizationPaused = false;
+        if (_mediaPlayer != null && _mediaPlayer.Media != null) _mediaPlayer.Play();
+        
+        // Restart procedural if it was active
+        if (_config.CurrentPresetId != null)
+        {
+            var preset = _config.Library.FirstOrDefault(p => p.Id == _config.CurrentPresetId);
+            if (preset?.Type == WallpaperType.Procedural && !string.IsNullOrEmpty(preset.ProceduralId))
+            {
+                _proceduralRenderer?.Start(preset.ProceduralId);
+            }
+        }
+
+        Console.WriteLine("[OPTIMIZATION] Resuming (Desktop visible)");
     }
 
     private void LoadConfig()
@@ -158,26 +185,44 @@ public partial class MainWindow : Window
             try
             {
                 string json = File.ReadAllText(WallpaperConfig.ConfigPath);
-                var config = Newtonsoft.Json.JsonConvert.DeserializeObject<WallpaperConfig>(json);
-                if (config != null) OnWallpaperChanged(config);
+                _config = Newtonsoft.Json.JsonConvert.DeserializeObject<WallpaperConfig>(json) ?? new WallpaperConfig();
+                
+                // Ensure default starchild/plasma are in library if missing
+                if (!_config.Library.Any(p => p.ProceduralId == "starfield"))
+                    _config.Library.Add(new WallpaperPreset { Name = "Deep Space", Type = WallpaperType.Procedural, ProceduralId = "starfield" });
+                if (!_config.Library.Any(p => p.ProceduralId == "plasma"))
+                    _config.Library.Add(new WallpaperPreset { Name = "Neon Plasma", Type = WallpaperType.Procedural, ProceduralId = "plasma" });
+
+                if (_config.CurrentPresetId == null) _config.CurrentPresetId = _config.Library.First().Id;
+                
+                OnWallpaperChanged(_config);
             }
             catch { /* Ignore invalid config */ }
+        }
+        else
+        {
+            _config = new WallpaperConfig(); 
+            if (_config.Library.Any()) _config.CurrentPresetId = _config.Library.First().Id;
+            OnWallpaperChanged(_config);
         }
     }
 
     private void OnWallpaperChanged(WallpaperConfig config)
     {
+        _config = config;
         var preset = config.Library.FirstOrDefault(p => p.Id == config.CurrentPresetId);
         
         // Reset layers
         ColorLayer.IsVisible = false;
         ImageLayer.IsVisible = false;
         VideoLayer.IsVisible = false;
+        ProceduralLayer.IsVisible = false;
         FallbackText.IsVisible = false;
         ImageLayer.Opacity = 0;
         VideoLayer.Opacity = 0;
         
         if (_mediaPlayer?.IsPlaying == true) _mediaPlayer.Stop();
+        _proceduralRenderer?.Stop();
         _isOptimizationPaused = false;
 
         if (preset == null)
@@ -229,6 +274,15 @@ public partial class MainWindow : Window
                 else FallbackText.IsVisible = true;
                 break;
 
+            case WallpaperType.Procedural:
+                if (!string.IsNullOrEmpty(preset.ProceduralId))
+                {
+                    ProceduralLayer.IsVisible = true;
+                    _proceduralRenderer?.Start(preset.ProceduralId);
+                }
+                else FallbackText.IsVisible = true;
+                break;
+
             default:
                 FallbackText.IsVisible = true;
                 break;
@@ -255,6 +309,7 @@ public partial class MainWindow : Window
     protected override void OnClosing(WindowClosingEventArgs e)
     {
         _optimizationTimer?.Stop();
+        _proceduralRenderer?.Stop();
         _mediaPlayer?.Dispose();
         _libVLC?.Dispose();
         base.OnClosing(e);

@@ -50,26 +50,9 @@ public partial class App : Application
                 }
             };
 
-            // Load and render SVG logo to Tray Icon
-            try
-            {
-                var svgSource = SvgSource.Load("avares://openwalls/assets/openwalls_logo.svg");
-                if (svgSource != null)
-                {
-                    var renderSize = new PixelSize(32, 32);
-                    var bitmap = new RenderTargetBitmap(renderSize, new Vector(96, 96));
-                    using (var ctx = bitmap.CreateDrawingContext())
-                    {
-                        var svgImage = new SvgImage { Source = svgSource };
-                        ctx.DrawImage(svgImage, new Rect(0, 0, 32, 32));
-                    }
-                    trayIcon.Icon = new WindowIcon(bitmap);
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[ERROR] Failed to load logo.svg: {ex.Message}");
-            }
+            // Load logo to Tray Icon via IconUtils
+            var icon = IconUtils.LoadSvgIcon();
+            if (icon != null) trayIcon.Icon = icon;
 
             var trayIcons = new TrayIcons { trayIcon };
             TrayIcon.SetIcons(this, trayIcons);

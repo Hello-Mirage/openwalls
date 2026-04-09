@@ -25,6 +25,7 @@ public partial class SettingsWindow : Window
     public SettingsWindow()
     {
         InitializeComponent();
+        this.Icon = IconUtils.LoadSvgIcon();
         LoadLibrary();
     }
 
@@ -42,10 +43,50 @@ public partial class SettingsWindow : Window
 
         _library = new ObservableCollection<WallpaperPreset>(_config.Library);
         
+        // Ensure default starchild/plasma are in library if missing (strict check)
+        EnsureProceduralDefault("starfield", "Deep Space");
+        EnsureProceduralDefault("plasma", "Neon Plasma");
+
+        // Cleanup any accidental duplicates from previous runs
+        CleanupDuplicates();
+
         // Sync Initial Active State
         foreach (var p in _library) p.IsActive = (p.Id == _config.CurrentPresetId);
         
         LibraryItemsControl.ItemsSource = _library;
+    }
+
+    private void EnsureProceduralDefault(string id, string name)
+    {
+        if (!_config.Library.Any(p => p.ProceduralId == id))
+        {
+            var p = new WallpaperPreset { Name = name, Type = WallpaperType.Procedural, ProceduralId = id };
+            _config.Library.Insert(0, p);
+            _library.Insert(0, p);
+        }
+    }
+
+    private void CleanupDuplicates()
+    {
+        var seenIds = new HashSet<string>();
+        var toRemove = new List<WallpaperPreset>();
+
+        foreach (var p in _config.Library)
+        {
+            if (!string.IsNullOrEmpty(p.ProceduralId))
+            {
+                if (seenIds.Contains(p.ProceduralId)) toRemove.Add(p);
+                else seenIds.Add(p.ProceduralId);
+            }
+        }
+
+        foreach (var p in toRemove)
+        {
+            _config.Library.Remove(p);
+            _library.Remove(p);
+        }
+        
+        if (toRemove.Count > 0) SaveConfig();
     }
 
     private void AddColor_Click(object? sender, RoutedEventArgs e)
@@ -221,6 +262,12 @@ public class ThumbnailConverter : IValueConverter
     {
         if (value is WallpaperPreset preset)
         {
+            if (preset.Type == WallpaperType.Procedural)
+            {
+                if (preset.ProceduralId == "starfield") return Brush.Parse("#000033");
+                if (preset.ProceduralId == "plasma") return Brush.Parse("#330033");
+            }
+
             // 1. Check for custom thumbnail first
             string? thumbPath = !string.IsNullOrEmpty(preset.ThumbnailPath) ? preset.ThumbnailPath : 
                                (preset.Type == WallpaperType.Image ? preset.Path : null);
