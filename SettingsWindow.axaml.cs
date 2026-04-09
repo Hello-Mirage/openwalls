@@ -135,7 +135,7 @@ public class ActiveColorConverter : IValueConverter
     public object Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
     {
         bool isActive = value is bool b && b;
-        return isActive ? Brush.Parse("#4ecca3") : Brush.Parse("Transparent");
+        return isActive ? Brush.Parse("White") : Brush.Parse("Transparent");
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) => throw new NotImplementedException();

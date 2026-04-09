@@ -16,12 +16,11 @@
 
     <Grid ColumnDefinitions="240, *">
         <!-- Sidebar -->
-        <Border Grid.Column="0" Background="#aa16213e" BorderBrush="#33ffffff" BorderThickness="0,0,1,0">
+        <Border Grid.Column="0" Background="#f2121212" BorderBrush="#11ffffff" BorderThickness="0,0,1,0">
             <Grid RowDefinitions="Auto, *, Auto">
                 <!-- Branding -->
                 <StackPanel Grid.Row="0" Margin="30,60,30,30" Spacing="4">
-                    <TextBlock Text="OPENWALLS" FontSize="20" FontWeight="Black" Foreground="#4ecca3" LetterSpacing="3"/>
-                    <TextBlock Text="v1.0 Professional" FontSize="10" Foreground="#888888" FontWeight="Bold"/>
+                    <TextBlock Text="OPENWALLS" FontSize="20" FontWeight="Black" Foreground="#E0E0E0" LetterSpacing="3"/>
                 </StackPanel>
 
                 <!-- Navigation List -->
@@ -31,11 +30,14 @@
                             <Style Selector="ListBoxItem">
                                 <Setter Property="Padding" Value="15,10"/>
                                 <Setter Property="CornerRadius" Value="8"/>
-                                <Setter Property="Foreground" Value="#cccccc"/>
+                                <Setter Property="Foreground" Value="#888888"/>
+                            </Style>
+                            <Style Selector="ListBoxItem:pointerover">
+                                <Setter Property="Foreground" Value="#E0E0E0"/>
                             </Style>
                             <Style Selector="ListBoxItem:selected">
-                                <Setter Property="Background" Value="#334ecca3"/>
-                                <Setter Property="Foreground" Value="#4ecca3"/>
+                                <Setter Property="Background" Value="#11ffffff"/>
+                                <Setter Property="Foreground" Value="#ffffff"/>
                             </Style>
                         </ListBox.Styles>
                         <ListBoxItem IsSelected="True">
@@ -51,66 +53,68 @@
                     
                     <!-- Color Swatches -->
                     <UniformGrid Columns="4" Margin="10,0">
-                        <Button Classes="ColorSwatch" Background="#111111" Click="AddColor_Click" Tag="#111111"/>
-                        <Button Classes="ColorSwatch" Background="#2c3e50" Click="AddColor_Click" Tag="#2c3e50"/>
-                        <Button Classes="ColorSwatch" Background="#16a085" Click="AddColor_Click" Tag="#16a085"/>
-                        <Button Classes="ColorSwatch" Background="#2980b9" Click="AddColor_Click" Tag="#2980b9"/>
-                        <Button Classes="ColorSwatch" Background="#8e44ad" Click="AddColor_Click" Tag="#8e44ad"/>
-                        <Button Classes="ColorSwatch" Background="#c0392b" Click="AddColor_Click" Tag="#c0392b"/>
-                        <Button Classes="ColorSwatch" Background="#d35400" Click="AddColor_Click" Tag="#d35400"/>
-                        <Button Classes="ColorSwatch" Background="#27ae60" Click="AddColor_Click" Tag="#27ae60"/>
+                        <Button Classes="ColorSwatch" Background="#000000" Click="AddColor_Click" Tag="#000000"/>
+                        <Button Classes="ColorSwatch" Background="#222222" Click="AddColor_Click" Tag="#222222"/>
+                        <Button Classes="ColorSwatch" Background="#333333" Click="AddColor_Click" Tag="#333333"/>
+                        <Button Classes="ColorSwatch" Background="#444444" Click="AddColor_Click" Tag="#444444"/>
+                        <Button Classes="ColorSwatch" Background="#555555" Click="AddColor_Click" Tag="#555555"/>
+                        <Button Classes="ColorSwatch" Background="#666666" Click="AddColor_Click" Tag="#666666"/>
+                        <Button Classes="ColorSwatch" Background="#888888" Click="AddColor_Click" Tag="#888888"/>
+                        <Button Classes="ColorSwatch" Background="#AAAAAA" Click="AddColor_Click" Tag="#AAAAAA"/>
                     </UniformGrid>
                 </StackPanel>
 
                 <!-- Footer / Add New -->
-                <Button Grid.Row="2" Margin="30" Width="180" Height="40" Background="#4ecca3" CornerRadius="20" Click="AddNew_Click">
+                <Button Grid.Row="2" Margin="30" Width="180" Height="40" Background="#E0E0E0" CornerRadius="8" Click="AddNew_Click">
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
-                        <TextBlock Text="+" FontSize="20" FontWeight="Light" Foreground="#0f3460" Margin="0,-2,0,0"/>
-                        <TextBlock Text="ADD NEW" FontWeight="Bold" Foreground="#0f3460" VerticalAlignment="Center" FontSize="12"/>
+                        <TextBlock Text="+" FontSize="20" FontWeight="Light" Foreground="#121212" Margin="0,-2,0,0"/>
+                        <TextBlock Text="ADD NEW" FontWeight="Bold" Foreground="#121212" VerticalAlignment="Center" FontSize="12"/>
                     </StackPanel>
                 </Button>
             </Grid>
         </Border>
 
         <!-- Main Content (Library) -->
-        <Grid Grid.Column="1" RowDefinitions="Auto, *">
-            <Border Grid.Row="0" Margin="30,60,30,0">
-                <StackPanel Spacing="10">
-                    <TextBlock Text="Library" FontSize="32" FontWeight="Bold" Foreground="White"/>
-                    <TextBlock Text="Choose a preset to apply as your desktop wallpaper." FontSize="13" Foreground="#888888"/>
-                </StackPanel>
-            </Border>
+        <Border Grid.Column="1" Background="#f2181818">
+            <Grid RowDefinitions="Auto, *">
+                <Border Grid.Row="0" Margin="30,60,30,0">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="Library" FontSize="32" FontWeight="Bold" Foreground="#E0E0E0"/>
+                        <TextBlock Text="Choose a preset to apply as your desktop wallpaper." FontSize="13" Foreground="#666666"/>
+                    </StackPanel>
+                </Border>
 
-            <ScrollViewer Grid.Row="1" Margin="15,15,15,30">
-                <ItemsControl x:Name="LibraryItemsControl">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <WrapPanel Margin="5"/>
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate DataType="local:WallpaperPreset">
-                            <Button Classes="Card" Margin="10" Padding="0" Background="Transparent" BorderThickness="0" Click="Preset_Click">
-                                <Border Width="180" Height="220" Background="#22111111" CornerRadius="16" BorderBrush="{Binding IsActive, Converter={StaticResource ActiveColorConverter}}" BorderThickness="2" ClipToBounds="True">
-                                    <Grid RowDefinitions="*, Auto">
-                                        <!-- Thumbnail Placeholder -->
-                                        <Border Grid.Row="0" Background="#22ffffff" Margin="10" CornerRadius="10">
-                                            <PathIcon x:Name="TypeIcon" Data="{StaticResource image_regular}" Opacity="0.3" Width="32" Height="32"/>
-                                        </Border>
-                                        
-                                        <!-- Info -->
-                                        <StackPanel Grid.Row="1" Margin="15,0,15,15" Spacing="2">
-                                            <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="Bold" FontSize="13" TextTrimming="CharacterEllipsis"/>
-                                            <TextBlock Text="{Binding Type}" Foreground="#888888" FontSize="11" FontWeight="SemiBold"/>
-                                        </StackPanel>
-                                    </Grid>
-                                </Border>
-                            </Button>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
-        </Grid>
+                <ScrollViewer Grid.Row="1" Margin="15,15,15,30">
+                    <ItemsControl x:Name="LibraryItemsControl">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Margin="5"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="local:WallpaperPreset">
+                                <Button Classes="Card" Margin="10" Padding="0" Background="Transparent" BorderThickness="0" Click="Preset_Click">
+                                    <Border Width="180" Height="220" Background="#08ffffff" CornerRadius="12" BorderBrush="{Binding IsActive, Converter={StaticResource ActiveColorConverter}}" BorderThickness="1" ClipToBounds="True">
+                                        <Grid RowDefinitions="*, Auto">
+                                            <!-- Thumbnail Placeholder -->
+                                            <Border Grid.Row="0" Background="#05ffffff" Margin="10" CornerRadius="8">
+                                                <PathIcon x:Name="TypeIcon" Data="{StaticResource image_regular}" Opacity="0.1" Width="32" Height="32"/>
+                                            </Border>
+                                            
+                                            <!-- Info -->
+                                            <StackPanel Grid.Row="1" Margin="15,0,15,15" Spacing="2">
+                                                <TextBlock Text="{Binding Name}" Foreground="#E0E0E0" FontWeight="SemiBold" FontSize="13" TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Text="{Binding Type}" Foreground="#666666" FontSize="11"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+        </Border>
     </Grid>
 
     <Window.Resources>
@@ -123,28 +127,20 @@
 
     <Window.Styles>
         <Style Selector="Button.Card:pointerover Border">
-            <Setter Property="Background" Value="#44ffffff"/>
-            <Setter Property="BorderBrush" Value="#4ecca3"/>
-            <Setter Property="RenderTransform" Value="scale(1.02)"/>
-        </Style>
-        <Style Selector="Button.Card">
-            <Setter Property="Transitions">
-                <Transitions>
-                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.2"/>
-                </Transitions>
-            </Setter>
+            <Setter Property="Background" Value="#11ffffff"/>
+            <Setter Property="BorderBrush" Value="#44ffffff"/>
         </Style>
         <Style Selector="Button.ColorSwatch">
-            <Setter Property="Width" Value="32"/>
-            <Setter Property="Height" Value="32"/>
+            <Setter Property="Width" Value="28"/>
+            <Setter Property="Height" Value="28"/>
             <Setter Property="Margin" Value="5"/>
-            <Setter Property="CornerRadius" Value="16"/>
+            <Setter Property="CornerRadius" Value="14"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="#33ffffff"/>
+            <Setter Property="BorderBrush" Value="#11ffffff"/>
         </Style>
         <Style Selector="Button.ColorSwatch:pointerover">
-            <Setter Property="BorderBrush" Value="#4ecca3"/>
-            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="BorderBrush" Value="#E0E0E0"/>
+            <Setter Property="BorderThickness" Value="1"/>
         </Style>
     </Window.Styles>
 </Window>
