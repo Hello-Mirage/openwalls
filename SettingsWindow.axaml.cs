@@ -115,12 +115,62 @@ public partial class SettingsWindow : Window
         }
     }
 
+    private async void SetThumbnail_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem item && item.DataContext is WallpaperPreset preset)
+        {
+            var topLevel = GetTopLevel(this);
+            if (topLevel == null) return;
+
+            var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                Title = $"Set Thumbnail for {preset.Name}",
+                FileTypeFilter = new[] { FilePickerFileTypes.ImageAll }
+            });
+
+            if (files.Any())
+            {
+                var sourcePath = files.First().Path.LocalPath;
+                var thumbDir = Path.Combine(Path.GetDirectoryName(WallpaperConfig.ConfigPath)!, "thumbnails");
+                if (!Directory.Exists(thumbDir)) Directory.CreateDirectory(thumbDir);
+
+                var ext = Path.GetExtension(sourcePath);
+                var destPath = Path.Combine(thumbDir, $"{preset.Id}{ext}");
+
+                try
+                {
+                    File.Copy(sourcePath, destPath, true);
+                    preset.ThumbnailPath = destPath;
+                    
+                    // Clear cache for this path to force reload
+                    ThumbnailConverter.ClearCache(destPath);
+                    
+                    SaveConfig();
+                    // Pulse the UI to refresh
+                    var idx = _library.IndexOf(preset);
+                    if (idx != -1) { _library.RemoveAt(idx); _library.Insert(idx, preset); }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Failed to set thumbnail: {ex.Message}");
+                }
+            }
+        }
+    }
+
     private void DeletePreset_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is MenuItem item && item.DataContext is WallpaperPreset preset)
         {
             _library.Remove(preset);
             _config.Library.RemoveAll(p => p.Id == preset.Id);
+            
+            // Cleanup thumb if exists
+            if (!string.IsNullOrEmpty(preset.ThumbnailPath) && File.Exists(preset.ThumbnailPath))
+            {
+                try { File.Delete(preset.ThumbnailPath); } catch { }
+            }
+            
             SaveConfig();
         }
     }
@@ -165,28 +215,34 @@ public class ThumbnailConverter : IValueConverter
 {
     private static Dictionary<string, Bitmap> _cache = new();
 
+    public static void ClearCache(string path) => _cache.Remove(path);
+
     public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
     {
         if (value is WallpaperPreset preset)
         {
-            if (preset.Type == WallpaperType.Color && !string.IsNullOrEmpty(preset.Color))
-            {
-                return Brush.Parse(preset.Color);
-            }
+            // 1. Check for custom thumbnail first
+            string? thumbPath = !string.IsNullOrEmpty(preset.ThumbnailPath) ? preset.ThumbnailPath : 
+                               (preset.Type == WallpaperType.Image ? preset.Path : null);
 
-            if (preset.Type == WallpaperType.Image && !string.IsNullOrEmpty(preset.Path) && File.Exists(preset.Path))
+            if (!string.IsNullOrEmpty(thumbPath) && File.Exists(thumbPath))
             {
-                if (_cache.TryGetValue(preset.Path, out var cached)) return cached;
+                if (_cache.TryGetValue(thumbPath, out var cached)) return cached;
                 
                 try
                 {
-                    // Render a small version for the gallery
-                    using var stream = File.OpenRead(preset.Path);
-                    var bitmap = Bitmap.DecodeToWidth(stream, 400); // 400px width limit for gallery performance
-                    _cache[preset.Path] = bitmap;
+                    using var stream = File.OpenRead(thumbPath);
+                    var bitmap = Bitmap.DecodeToWidth(stream, 400);
+                    _cache[thumbPath] = bitmap;
                     return bitmap;
                 }
                 catch { return null; }
+            }
+
+            // 2. Fallback to Color
+            if (preset.Type == WallpaperType.Color && !string.IsNullOrEmpty(preset.Color))
+            {
+                return Brush.Parse(preset.Color);
             }
         }
         return null;

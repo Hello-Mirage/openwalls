@@ -19,6 +19,12 @@ Openwalls is a powerful, lightweight, and intelligent desktop wallpaper engine d
 3. Use the Tray Icon in the taskbar to open the Settings dashboard.
 4. Select or add your favorite wallpaper to the library.
 
+## Compatible On
+
+- Windows 11
+- Windows 10
+- Windows Server 2019+
+
 ## Credits
 
 Created by Hello-Mirage.

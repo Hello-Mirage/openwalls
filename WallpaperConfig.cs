@@ -21,6 +21,7 @@ public class WallpaperPreset : INotifyPropertyChanged
     public string Name { get; set; } = "Untitled";
     public string? Path { get; set; }
     public string? Color { get; set; } // Hex Color
+    public string? ThumbnailPath { get; set; } // Custom Thumbnail Path
     public WallpaperType Type { get; set; }
     public bool IsMuted { get; set; } = true;
     public DateTime DateAdded { get; set; } = DateTime.Now;

@@ -101,6 +101,8 @@
                                         <!-- Context Menu -->
                                         <Button.ContextMenu>
                                             <ContextMenu>
+                                                <MenuItem Header="Set Thumbnail..." Click="SetThumbnail_Click" FontWeight="SemiBold"/>
+                                                <Separator Background="#11ffffff"/>
                                                 <MenuItem Header="Delete Preset" Click="DeletePreset_Click" Foreground="#ff5555"/>
                                             </ContextMenu>
                                         </Button.ContextMenu>
