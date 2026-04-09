@@ -97,7 +97,7 @@ public partial class MainWindow : Window
         if (ClockLayer.IsVisible)
         {
             var now = DateTime.Now;
-            ClockTime.Text = now.ToString("HH:mm");
+            ClockTime.Text = now.ToString("h:mm");
             ClockDate.Text = now.ToString("dddd, MMMM dd").ToUpper();
         }
     }
@@ -266,9 +266,26 @@ public partial class MainWindow : Window
                 _proceduralRenderer?.Start(preset); 
                 break;
             case WallpaperType.Clock:
-                var clockPath = preset.GetResourcePath(preset.ClockImagePath ?? "assets/samurai-warrior-observing-village-moonlight.jpg");
-                if (File.Exists(clockPath)) ClockBackground.Source = new Bitmap(clockPath);
-                else if (File.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, clockPath))) ClockBackground.Source = new Bitmap(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, clockPath));
+                var relativeClockPath = preset.ClockImagePath ?? "assets/samurai-warrior-observing-village-moonlight.jpg";
+                var clockPath = preset.GetResourcePath(relativeClockPath);
+                
+                if (File.Exists(clockPath)) 
+                {
+                    ClockBackground.Source = new Bitmap(clockPath);
+                }
+                else 
+                {
+                    // Fallback to absolute check or assets folder
+                    var fallbackPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, relativeClockPath);
+                    if (File.Exists(fallbackPath)) 
+                    {
+                        ClockBackground.Source = new Bitmap(fallbackPath);
+                    }
+                    else if (File.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "assets/samurai-warrior-observing-village-moonlight.jpg")))
+                    {
+                        ClockBackground.Source = new Bitmap(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "assets/samurai-warrior-observing-village-moonlight.jpg"));
+                    }
+                }
                 ClockLayer.IsVisible = true;
                 UpdateClock(null, EventArgs.Empty);
                 break;

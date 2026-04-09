@@ -31,5 +31,7 @@
   <ItemGroup>
     <Compile Remove="wallpapers\**\*.cs" />
     <None Include="wallpapers\**\*.cs" />
+    <None Update="assets\**" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="wallpapers\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

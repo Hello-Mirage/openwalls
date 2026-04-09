@@ -14,6 +14,7 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Input;
 using Avalonia.Threading;
+using System.Globalization;
 
 namespace openwalls;
 
@@ -38,11 +39,26 @@ public partial class SettingsWindow : Window
         MarketplaceView.IsVisible = NavList.SelectedIndex == 1;
     }
 
+    private string GetUserLibraryDir()
+    {
+        string pcName = Environment.MachineName.Replace(" ", "_");
+        string path = Path.Combine(WallpaperConfig.LibraryDir, "user", pcName);
+        if (!Directory.Exists(path)) Directory.CreateDirectory(path);
+        return path;
+    }
+
     private void LoadLibrary()
     {
         // 1. Ensure directories exist
-        if (!Directory.Exists(WallpaperConfig.BaseDir)) Directory.CreateDirectory(WallpaperConfig.BaseDir);
-        if (!Directory.Exists(WallpaperConfig.LibraryDir)) Directory.CreateDirectory(WallpaperConfig.LibraryDir);
+        try
+        {
+            if (!Directory.Exists(WallpaperConfig.BaseDir)) Directory.CreateDirectory(WallpaperConfig.BaseDir);
+            if (!Directory.Exists(WallpaperConfig.LibraryDir)) Directory.CreateDirectory(WallpaperConfig.LibraryDir);
+            
+            // Proactively create user folder
+            GetUserLibraryDir();
+        }
+        catch { }
 
         // 2. Load core config (Current active ID, etc)
         if (File.Exists(WallpaperConfig.ConfigPath))
@@ -55,20 +71,19 @@ public partial class SettingsWindow : Window
             catch { _config = new WallpaperConfig(); }
         }
 
-        // 3. Scan Modular Library
+        // 3. Scan Modular Library (Recursive)
         var allPresets = new List<WallpaperPreset>();
-        var folders = Directory.GetDirectories(WallpaperConfig.LibraryDir);
-        foreach (var folder in folders)
+        if (Directory.Exists(WallpaperConfig.LibraryDir))
         {
-            var metaPath = Path.Combine(folder, "wallpaper.json");
-            if (File.Exists(metaPath))
+            var metaFiles = Directory.GetFiles(WallpaperConfig.LibraryDir, "wallpaper.json", SearchOption.AllDirectories);
+            foreach (var metaPath in metaFiles)
             {
                 try
                 {
                     var preset = JsonConvert.DeserializeObject<WallpaperPreset>(File.ReadAllText(metaPath));
                     if (preset != null)
                     {
-                        preset.BaseDirectory = folder;
+                        preset.BaseDirectory = Path.GetDirectoryName(metaPath);
                         allPresets.Add(preset);
                     }
                 }
@@ -97,10 +112,10 @@ public partial class SettingsWindow : Window
     {
         var defaults = new List<WallpaperPreset>
         {
-            new WallpaperPreset { Name = "Zen Clock", Type = WallpaperType.Clock, ClockImagePath = "samurai.jpg" },
-            new WallpaperPreset { Name = "Deep Space", Type = WallpaperType.Procedural, ProceduralId = "starfield" },
-            new WallpaperPreset { Name = "Matrix Code", Type = WallpaperType.Procedural, ProceduralId = "matrix" },
-            new WallpaperPreset { Name = "Neural Swarm", Type = WallpaperType.Procedural, ProceduralId = "swarm" }
+            new WallpaperPreset { Id = "zen-clock-default", Name = "Zen Clock", Type = WallpaperType.Clock, ClockImagePath = "samurai.jpg", ThumbnailPath = "thumbnail.png" },
+            new WallpaperPreset { Id = "deep-space-default", Name = "Deep Space", Type = WallpaperType.Procedural, ProceduralId = "starfield", ThumbnailPath = "thumbnail.png" },
+            new WallpaperPreset { Id = "matrix-code-default", Name = "Matrix Code", Type = WallpaperType.Procedural, ProceduralId = "matrix", ThumbnailPath = "thumbnail.png" },
+            new WallpaperPreset { Id = "neural-swarm-default", Name = "Neural Swarm", Type = WallpaperType.Procedural, ProceduralId = "swarm", ThumbnailPath = "thumbnail.png" }
         };
 
         foreach (var d in defaults)
@@ -115,6 +130,17 @@ public partial class SettingsWindow : Window
             {
                 var src = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "assets/samurai-warrior-observing-village-moonlight.jpg");
                 if (File.Exists(src)) File.Copy(src, Path.Combine(folder, "samurai.jpg"), true);
+
+                var thumbSrc = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "assets/samurai-warrior-observing-village-moonlight.jpg"); // Fallback
+                var currentThumbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $"wallpapers/{d.Name.Replace(" ", "")}/thumbnail.png");
+                
+                if (File.Exists(currentThumbPath))
+                {
+                    thumbSrc = currentThumbPath;
+                }
+                
+                var thumbDest = Path.Combine(folder, "thumbnail.png");
+                if (File.Exists(thumbSrc)) File.Copy(thumbSrc, thumbDest, true);
             }
 
             File.WriteAllText(Path.Combine(folder, "wallpaper.json"), JsonConvert.SerializeObject(d, Formatting.Indented));
@@ -126,8 +152,8 @@ public partial class SettingsWindow : Window
         if (sender is Button btn && btn.Tag is string hex)
         {
             var preset = new WallpaperPreset { Name = $"Color {hex}", Color = hex, Type = WallpaperType.Color };
-            // Save as modular folder
-            var folder = Path.Combine(WallpaperConfig.LibraryDir, $"Color_{hex.Replace("#", "")}");
+            // Save as modular folder in user directory
+            var folder = Path.Combine(GetUserLibraryDir(), $"Color_{hex.Replace("#", "")}");
             if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
             File.WriteAllText(Path.Combine(folder, "wallpaper.json"), JsonConvert.SerializeObject(preset, Formatting.Indented));
             LoadLibrary();
@@ -153,7 +179,7 @@ public partial class SettingsWindow : Window
             var type = (ext == ".mp4" || ext == ".mkv" || ext == ".mov" || ext == ".avi") ? WallpaperType.Video : WallpaperType.Image;
             
             var name = Path.GetFileNameWithoutExtension(path);
-            var folder = Path.Combine(WallpaperConfig.LibraryDir, name.Replace(" ", "_") + "_" + Guid.NewGuid().ToString().Substring(0, 4));
+            var folder = Path.Combine(GetUserLibraryDir(), name.Replace(" ", "_") + "_" + Guid.NewGuid().ToString().Substring(0, 4));
             Directory.CreateDirectory(folder);
 
             var destFile = "backdrop" + ext;
@@ -270,64 +296,120 @@ public class ActiveColorConverter : IValueConverter
     public object ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) => throw new NotImplementedException();
 }
 
-public class ThumbnailConverter : IValueConverter
+public class ThumbnailConverter : IMultiValueConverter
 {
     private static Dictionary<string, Bitmap> _cache = new();
     private static HashSet<string> _loading = new();
 
     public static void ClearCache(string path) => _cache.Remove(path);
 
-    public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
+    public object? Convert(IList<object?> values, Type targetType, object? parameter, CultureInfo culture)
     {
-        if (value is WallpaperPreset preset)
+        if (values.Count > 0 && values[0] is WallpaperPreset preset)
         {
-            if (preset.Type == WallpaperType.Procedural)
-            {
-                if (preset.ProceduralId == "starfield") return Brush.Parse("#000033");
-                if (preset.ProceduralId == "matrix") return Brush.Parse("#002200");
-                if (preset.ProceduralId == "swarm") return Brush.Parse("#222222");
-                return Brush.Parse("#333333");
-            }
+            // 1. Determine what we are looking for
+            bool wantsBrush = typeof(IBrush).IsAssignableFrom(targetType);
+            bool wantsImage = typeof(IImage).IsAssignableFrom(targetType);
 
+            // 2. Identify the resource path
             string? thumbRel = !string.IsNullOrEmpty(preset.ThumbnailPath) ? preset.ThumbnailPath : 
                                (preset.Type == WallpaperType.Image ? preset.Path : 
                                (preset.Type == WallpaperType.Clock ? preset.ClockImagePath : null));
 
             string? thumbPath = preset.GetResourcePath(thumbRel);
-
-            if (!string.IsNullOrEmpty(thumbPath) && File.Exists(thumbPath))
+            
+            // Hardcoded dev fallback for source directory
+            if (!string.IsNullOrEmpty(thumbRel) && !File.Exists(thumbPath))
             {
-                if (_cache.TryGetValue(thumbPath, out var cached)) return cached;
-                
-                if (!_loading.Contains(thumbPath))
-                {
-                    _loading.Add(thumbPath);
-                    var currentPath = thumbPath;
-                    Task.Run(() =>
-                    {
-                        try
-                        {
-                            using var stream = File.OpenRead(currentPath);
-                            var bitmap = Bitmap.DecodeToWidth(stream, 400);
-                            _cache[currentPath] = bitmap;
-                            Dispatcher.UIThread.Post(() => 
-                            {
-                                _loading.Remove(currentPath);
-                                preset.ThumbnailPath = preset.ThumbnailPath; // Trigger UI refresh
-                            });
-                        }
-                        catch { Dispatcher.UIThread.Post(() => _loading.Remove(currentPath!)); }
-                    });
-                }
-                return null;
+                var devPath = Path.Combine("D:/openwalls", "wallpapers", preset.Name.Replace(" ", ""), thumbRel);
+                if (File.Exists(devPath)) thumbPath = devPath;
             }
 
-            if (preset.Type == WallpaperType.Color && !string.IsNullOrEmpty(preset.Color)) return Brush.Parse(preset.Color);
+            // 3. Handle Images (Bitmaps)
+            if (!string.IsNullOrEmpty(thumbPath))
+            {
+                // Try from cache
+                if (_cache.TryGetValue(thumbPath, out var cached))
+                {
+                    if (wantsImage) return cached;
+                    if (wantsBrush) return new ImageBrush(cached) { Stretch = Stretch.UniformToFill };
+                    return null;
+                }
+
+                // Try to Load if File Exists
+                if (File.Exists(thumbPath))
+                {
+                    if (!_loading.Contains(thumbPath))
+                    {
+                        _loading.Add(thumbPath);
+                        var currentPath = thumbPath;
+                        Task.Run(() =>
+                        {
+                            try
+                            {
+                                using var stream = File.OpenRead(currentPath);
+                                var bitmap = Bitmap.DecodeToWidth(stream, 400);
+                                _cache[currentPath] = bitmap;
+                                Dispatcher.UIThread.Post(() => 
+                                {
+                                    _loading.Remove(currentPath);
+                                    preset.ThumbnailPath = preset.ThumbnailPath; // Trigger refresh
+                                });
+                            }
+                            catch { Dispatcher.UIThread.Post(() => _loading.Remove(currentPath!)); }
+                        });
+                    }
+                }
+            }
+
+            // 4. Handle Fallbacks while loading or if missing
+            if (preset.Type == WallpaperType.Clock)
+            {
+                var samuraiPaths = new[] {
+                    preset.GetResourcePath(preset.ClockImagePath),
+                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "assets/samurai-warrior-observing-village-moonlight.jpg"),
+                    "D:/openwalls/assets/samurai-warrior-observing-village-moonlight.jpg"
+                };
+
+                foreach (var p in samuraiPaths)
+                {
+                    if (!string.IsNullOrEmpty(p) && File.Exists(p))
+                    {
+                        // Load and cache the fallback so we don't repeat this
+                        try {
+                            var bmp = new Bitmap(p);
+                            _cache[p] = bmp;
+                            if (wantsImage) return bmp;
+                            if (wantsBrush) return new ImageBrush(bmp) { Stretch = Stretch.UniformToFill };
+                        } catch {}
+                    }
+                }
+            }
+
+            // 5. Handle Colors/Procedural (Brushes)
+            IBrush? colorBrush = null;
+            if (preset.Type == WallpaperType.Color && !string.IsNullOrEmpty(preset.Color)) 
+                colorBrush = Brush.Parse(preset.Color);
+            else if (preset.Type == WallpaperType.Procedural)
+            {
+                if (preset.Name.Contains("Matrix", StringComparison.OrdinalIgnoreCase)) colorBrush = Brush.Parse("#004400");
+                else if (preset.Name.Contains("Space", StringComparison.OrdinalIgnoreCase)) colorBrush = Brush.Parse("#000033");
+                else if (preset.Name.Contains("Hack", StringComparison.OrdinalIgnoreCase)) colorBrush = Brush.Parse("#330000");
+                else if (preset.Name.Contains("Swarm", StringComparison.OrdinalIgnoreCase)) colorBrush = Brush.Parse("#222222");
+            }
+
+            if (colorBrush != null)
+            {
+                if (wantsBrush) return colorBrush;
+                return null; // Don't return brush for Image.Source
+            }
+
+            if (wantsBrush) return Brush.Parse("#1a1a1a");
         }
         return null;
     }
 
-    public object ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) => throw new NotImplementedException();
+    public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture) => throw new NotImplementedException();
 }
 
 public class TypeToVisibilityConverter : IValueConverter

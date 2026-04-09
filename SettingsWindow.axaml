@@ -110,8 +110,22 @@
                                         <Border Width="280" Background="#08ffffff" CornerRadius="12" BorderBrush="{Binding IsActive, Converter={StaticResource ActiveColorConverter}}" BorderThickness="1" ClipToBounds="True">
                                             <StackPanel>
                                                 <Panel Height="157">
-                                                    <Border Background="{Binding Converter={StaticResource ThumbnailConverter}}" />
-                                                    <Image Source="{Binding Converter={StaticResource ThumbnailConverter}}" Stretch="UniformToFill"/>
+                                                     <Border>
+                                                        <Border.Background>
+                                                            <MultiBinding Converter="{StaticResource ThumbnailConverter}">
+                                                                <Binding Path="." />
+                                                                <Binding Path="ThumbnailPath" />
+                                                            </MultiBinding>
+                                                        </Border.Background>
+                                                     </Border>
+                                                     <Image Stretch="UniformToFill">
+                                                        <Image.Source>
+                                                            <MultiBinding Converter="{StaticResource ThumbnailConverter}">
+                                                                <Binding Path="." />
+                                                                <Binding Path="ThumbnailPath" />
+                                                            </MultiBinding>
+                                                        </Image.Source>
+                                                     </Image>
                                                 </Panel>
                                                 <StackPanel Margin="15,12" Spacing="2">
                                                     <TextBlock Text="{Binding Name}" Foreground="#E0E0E0" FontWeight="SemiBold" FontSize="13" TextTrimming="CharacterEllipsis"/>

@@ -25,7 +25,7 @@
             <Image x:Name="ClockBackground" Stretch="UniformToFill" />
             <Border Background="Black" Opacity="0.2" /> <!-- Subtle darken for HUD readability -->
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,0,150">
-                <TextBlock x:Name="ClockTime" Text="00:00" FontSize="120" FontWeight="ExtraBold" Foreground="White" LetterSpacing="5" HorizontalAlignment="Center">
+                <TextBlock x:Name="ClockTime" Text="00:00" FontFamily="avares://openwalls/assets/electroharmonix/Electroharmonix.otf#Electroharmonix" FontSize="140" FontWeight="ExtraBold" Foreground="White" LetterSpacing="10" HorizontalAlignment="Center">
                     <TextBlock.Effect>
                         <DropShadowEffect BlurRadius="30" Opacity="0.8" Color="Black" />
                     </TextBlock.Effect>

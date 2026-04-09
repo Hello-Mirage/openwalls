@@ -1,5 +1,7 @@
 {
+  "Id": "zen-clock-default",
   "Name": "Zen Clock",
   "Type": "Clock",
-  "ClockImagePath": "samurai.jpg"
+  "ClockImagePath": "samurai.jpg",
+  "ThumbnailPath": "thumbnail.png"
 }
