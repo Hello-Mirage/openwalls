@@ -924,3 +924,11 @@ D:\openwalls\bin\Debug\net10.0\libvlc\win-x86\plugins\visualization\libvisual_pl
 D:\openwalls\bin\Debug\net10.0\LibVLCSharp.dll
 D:\openwalls\bin\Debug\net10.0\LibVLCSharp.Avalonia.dll
 D:\openwalls\bin\Debug\net10.0\Newtonsoft.Json.dll
+D:\openwalls\obj\Debug\net10.0\openwalls.sourcelink.json
+D:\openwalls\bin\Debug\net10.0\Avalonia.Svg.Skia.dll
+D:\openwalls\bin\Debug\net10.0\ExCSS.dll
+D:\openwalls\bin\Debug\net10.0\ShimSkiaSharp.dll
+D:\openwalls\bin\Debug\net10.0\SkiaSharp.HarfBuzz.dll
+D:\openwalls\bin\Debug\net10.0\Svg.Custom.dll
+D:\openwalls\bin\Debug\net10.0\Svg.Model.dll
+D:\openwalls\bin\Debug\net10.0\Svg.Skia.dll

@@ -53,17 +53,15 @@ public partial class App : Application
             // Load and render SVG logo to Tray Icon
             try
             {
-                var uri = new Uri("avares://openwalls/assets/openwalls_logo.svg");
-                var svgSource = SvgSource.Load(uri, null);
-                
+                var svgSource = SvgSource.Load("avares://openwalls/assets/openwalls_logo.svg");
                 if (svgSource != null)
                 {
                     var renderSize = new PixelSize(32, 32);
                     var bitmap = new RenderTargetBitmap(renderSize, new Vector(96, 96));
                     using (var ctx = bitmap.CreateDrawingContext())
                     {
-                        var bounds = new Rect(0, 0, 32, 32);
-                        svgSource.Draw(ctx, bounds);
+                        var svgImage = new SvgImage { Source = svgSource };
+                        ctx.DrawImage(svgImage, new Rect(0, 0, 32, 32));
                     }
                     trayIcon.Icon = new WindowIcon(bitmap);
                 }

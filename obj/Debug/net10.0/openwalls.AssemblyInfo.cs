@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("openwalls")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+0ca0b61dfcb87a8a69a42d0cbaaf00af7c2c3e9d")]
 [assembly: System.Reflection.AssemblyProductAttribute("openwalls")]
 [assembly: System.Reflection.AssemblyTitleAttribute("openwalls")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
