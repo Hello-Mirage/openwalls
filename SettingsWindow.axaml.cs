@@ -194,3 +194,19 @@ public class ThumbnailConverter : IValueConverter
 
     public object ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) => throw new NotImplementedException();
 }
+
+public class TypeToVisibilityConverter : IValueConverter
+{
+    public static readonly TypeToVisibilityConverter Instance = new();
+
+    public object Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
+    {
+        if (value is WallpaperType type && parameter is string target)
+        {
+            return type.ToString() == target;
+        }
+        return false;
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) => throw new NotImplementedException();
+}
