@@ -1,0 +1,22 @@
+{
+  "name": "openwalls-mcp-bridge",
+  "version": "1.0.0",
+  "description": "AI-Ready Bridge for Openwalls Modular Wallpapers",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "tsx index.ts"
+  },
+  "keywords": [],
+  "author": "Mirage",
+  "license": "ISC",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.2",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.2"
+  }
+}
