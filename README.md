@@ -20,7 +20,7 @@ Openwalls is a high-performance, modular wallpaper engine for Windows, designed 
 3. **Library**: Create new "Plug-and-Play" wallpapers by adding images, videos, or custom C# scripts to the library directory.
 4. **Marketplace**: Browse the built-in marketplace tab to discover community-contributed procedural shaders and loops.
 
-##Screenshots
+## Screenshots
 
 <img width="1919" height="1019" alt="image" src="https://github.com/user-attachments/assets/6589e87d-4326-45e7-8347-aaa5c32d4c87" />
 
