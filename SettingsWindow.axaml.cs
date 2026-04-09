@@ -10,6 +10,8 @@ using Newtonsoft.Json;
 using System.Collections.ObjectModel;
 using Avalonia.Data.Converters;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
+using Avalonia.Input;
 
 namespace openwalls;
 
@@ -113,6 +115,24 @@ public partial class SettingsWindow : Window
         }
     }
 
+    private void DeletePreset_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem item && item.DataContext is WallpaperPreset preset)
+        {
+            _library.Remove(preset);
+            _config.Library.RemoveAll(p => p.Id == preset.Id);
+            SaveConfig();
+        }
+    }
+
+    private void DragStrip_PointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        {
+            this.BeginMoveDrag(e);
+        }
+    }
+
     private void SaveConfig()
     {
         try
@@ -136,6 +156,40 @@ public class ActiveColorConverter : IValueConverter
     {
         bool isActive = value is bool b && b;
         return isActive ? Brush.Parse("White") : Brush.Parse("Transparent");
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) => throw new NotImplementedException();
+}
+
+public class ThumbnailConverter : IValueConverter
+{
+    private static Dictionary<string, Bitmap> _cache = new();
+
+    public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
+    {
+        if (value is WallpaperPreset preset)
+        {
+            if (preset.Type == WallpaperType.Color && !string.IsNullOrEmpty(preset.Color))
+            {
+                return Brush.Parse(preset.Color);
+            }
+
+            if (preset.Type == WallpaperType.Image && !string.IsNullOrEmpty(preset.Path) && File.Exists(preset.Path))
+            {
+                if (_cache.TryGetValue(preset.Path, out var cached)) return cached;
+                
+                try
+                {
+                    // Render a small version for the gallery
+                    using var stream = File.OpenRead(preset.Path);
+                    var bitmap = Bitmap.DecodeToWidth(stream, 400); // 400px width limit for gallery performance
+                    _cache[preset.Path] = bitmap;
+                    return bitmap;
+                }
+                catch { return null; }
+            }
+        }
+        return null;
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) => throw new NotImplementedException();

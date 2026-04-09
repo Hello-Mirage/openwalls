@@ -6,7 +6,7 @@
         mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="600"
         x:Class="openwalls.SettingsWindow"
         Title="Openwalls Dashboard"
-        Width="900" Height="650"
+        Width="920" Height="680"
         WindowStartupLocation="CenterScreen"
         TransparencyLevelHint="Mica, AcrylicBlur"
         Background="Transparent"
@@ -14,116 +14,129 @@
         ExtendClientAreaToDecorationsHint="True"
         ExtendClientAreaTitleBarHeightHint="-1">
 
-    <Grid ColumnDefinitions="240, *">
-        <!-- Sidebar -->
-        <Border Grid.Column="0" Background="#f2121212" BorderBrush="#11ffffff" BorderThickness="0,0,1,0">
-            <Grid RowDefinitions="Auto, *, Auto">
-                <!-- Branding -->
-                <StackPanel Grid.Row="0" Margin="30,60,30,30" Spacing="4">
-                    <TextBlock Text="OPENWALLS" FontSize="20" FontWeight="Black" Foreground="#E0E0E0" LetterSpacing="3"/>
-                </StackPanel>
-
-                <!-- Navigation List -->
-                <StackPanel Grid.Row="1" Margin="15,0" Spacing="5">
-                    <ListBox x:Name="NavList" Background="Transparent" BorderThickness="0">
-                        <ListBox.Styles>
-                            <Style Selector="ListBoxItem">
-                                <Setter Property="Padding" Value="15,10"/>
-                                <Setter Property="CornerRadius" Value="8"/>
-                                <Setter Property="Foreground" Value="#888888"/>
-                            </Style>
-                            <Style Selector="ListBoxItem:pointerover">
-                                <Setter Property="Foreground" Value="#E0E0E0"/>
-                            </Style>
-                            <Style Selector="ListBoxItem:selected">
-                                <Setter Property="Background" Value="#11ffffff"/>
-                                <Setter Property="Foreground" Value="#ffffff"/>
-                            </Style>
-                        </ListBox.Styles>
-                        <ListBoxItem IsSelected="True">
-                            <StackPanel Orientation="Horizontal" Spacing="10">
-                                <PathIcon Data="{StaticResource library_regular}" Width="16"/>
-                                <TextBlock Text="My Library" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </ListBoxItem>
-                    </ListBox>
-
-                    <Separator Background="#11ffffff" Margin="10,20"/>
-                    <TextBlock Text="COLOR PRESETS" FontSize="10" Foreground="#666666" Margin="15,0,0,10" FontWeight="Bold" LetterSpacing="1"/>
-                    
-                    <!-- Color Swatches -->
-                    <UniformGrid Columns="4" Margin="10,0">
-                        <Button Classes="ColorSwatch" Background="#000000" Click="AddColor_Click" Tag="#000000"/>
-                        <Button Classes="ColorSwatch" Background="#222222" Click="AddColor_Click" Tag="#222222"/>
-                        <Button Classes="ColorSwatch" Background="#333333" Click="AddColor_Click" Tag="#333333"/>
-                        <Button Classes="ColorSwatch" Background="#444444" Click="AddColor_Click" Tag="#444444"/>
-                        <Button Classes="ColorSwatch" Background="#555555" Click="AddColor_Click" Tag="#555555"/>
-                        <Button Classes="ColorSwatch" Background="#666666" Click="AddColor_Click" Tag="#666666"/>
-                        <Button Classes="ColorSwatch" Background="#888888" Click="AddColor_Click" Tag="#888888"/>
-                        <Button Classes="ColorSwatch" Background="#AAAAAA" Click="AddColor_Click" Tag="#AAAAAA"/>
-                    </UniformGrid>
-                </StackPanel>
-
-                <!-- Footer / Add New -->
-                <Button Grid.Row="2" Margin="30" Width="180" Height="40" Background="#E0E0E0" CornerRadius="8" Click="AddNew_Click">
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
-                        <TextBlock Text="+" FontSize="20" FontWeight="Light" Foreground="#121212" Margin="0,-2,0,0"/>
-                        <TextBlock Text="ADD NEW" FontWeight="Bold" Foreground="#121212" VerticalAlignment="Center" FontSize="12"/>
-                    </StackPanel>
-                </Button>
-            </Grid>
-        </Border>
-
-        <!-- Main Content (Library) -->
-        <Border Grid.Column="1" Background="#f2181818">
-            <Grid RowDefinitions="Auto, *">
-                <Border Grid.Row="0" Margin="30,60,30,0">
-                    <StackPanel Spacing="10">
-                        <TextBlock Text="Library" FontSize="32" FontWeight="Bold" Foreground="#E0E0E0"/>
-                        <TextBlock Text="Choose a preset to apply as your desktop wallpaper." FontSize="13" Foreground="#666666"/>
-                    </StackPanel>
-                </Border>
-
-                <ScrollViewer Grid.Row="1" Margin="15,15,15,30">
-                    <ItemsControl x:Name="LibraryItemsControl">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <WrapPanel Margin="5"/>
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate DataType="local:WallpaperPreset">
-                                <Button Classes="Card" Margin="10" Padding="0" Background="Transparent" BorderThickness="0" Click="Preset_Click">
-                                    <Border Width="180" Height="220" Background="#08ffffff" CornerRadius="12" BorderBrush="{Binding IsActive, Converter={StaticResource ActiveColorConverter}}" BorderThickness="1" ClipToBounds="True">
-                                        <Grid RowDefinitions="*, Auto">
-                                            <!-- Thumbnail Placeholder -->
-                                            <Border Grid.Row="0" Background="#05ffffff" Margin="10" CornerRadius="8">
-                                                <PathIcon x:Name="TypeIcon" Data="{StaticResource image_regular}" Opacity="0.1" Width="32" Height="32"/>
-                                            </Border>
-                                            
-                                            <!-- Info -->
-                                            <StackPanel Grid.Row="1" Margin="15,0,15,15" Spacing="2">
-                                                <TextBlock Text="{Binding Name}" Foreground="#E0E0E0" FontWeight="SemiBold" FontSize="13" TextTrimming="CharacterEllipsis"/>
-                                                <TextBlock Text="{Binding Type}" Foreground="#666666" FontSize="11"/>
-                                            </StackPanel>
-                                        </Grid>
-                                    </Border>
-                                </Button>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </ScrollViewer>
-            </Grid>
-        </Border>
-    </Grid>
-
     <Window.Resources>
         <local:ActiveColorConverter x:Key="ActiveColorConverter"/>
-        <!-- Fluent Icons Shorthands -->
+        <local:ThumbnailConverter x:Key="ThumbnailConverter"/>
+        <!-- Fluent Icons -->
         <StreamGeometry x:Key="library_regular">M12,2A10,10,0,1,0,22,12,10.011,10.011,0,0,0,12,2Zm0,18a8,8,0,1,1,8-8A8.009,8.009,0,0,1,12,20ZM11,7h2v6H11Zm0,8h2v2H11Z</StreamGeometry>
-        <StreamGeometry x:Key="settings_regular">M12,15.5A3.5,3.5,0,1,1,15.5,12,3.5,3.5,0,0,1,12,15.5Zm0-5A1.5,1.5,0,1,0,13.5,12,1.5,1.5,0,0,0,12,10.5Z</StreamGeometry>
         <StreamGeometry x:Key="image_regular">M19,5H5A2,2,0,0,0,3,7V17a2,2,0,0,0,2,2H19a2,2,0,0,0,2-2V7A2,2,0,0,0,19,5Zm0,12H5V7H19ZM14.14,11.86,11.5,15.36l-1.64-2.15L7.5,17h9Z</StreamGeometry>
+        <StreamGeometry x:Key="video_regular">M19,5H5A2,2,0,0,0,3,7V17a2,2,0,0,0,2,2H19a2,2,0,0,0,2-2V7A2,2,0,0,0,19,5ZM16,13l-5,3V10l5,3Z</StreamGeometry>
     </Window.Resources>
+
+    <Grid RowDefinitions="Auto, *">
+        <!-- Top Drag Handle (Invisible but active) -->
+        <Border Grid.Row="0" Height="40" Background="Transparent" IsHitTestVisible="True" PointerPressed="DragStrip_PointerPressed"/>
+
+        <Grid Grid.Row="1" ColumnDefinitions="240, *">
+            <!-- Sidebar -->
+            <Border Grid.Column="0" Background="#f2121212" BorderBrush="#11ffffff" BorderThickness="0,0,1,0">
+                <Grid RowDefinitions="Auto, *, Auto">
+                    <!-- Branding -->
+                    <StackPanel Grid.Row="0" Margin="30,20,30,30" Spacing="4">
+                        <TextBlock Text="OPENWALLS" FontSize="20" FontWeight="Black" Foreground="#E0E0E0" LetterSpacing="3"/>
+                    </StackPanel>
+
+                    <!-- Navigation -->
+                    <StackPanel Grid.Row="1" Margin="15,0" Spacing="5">
+                        <ListBox x:Name="NavList" Background="Transparent" BorderThickness="0">
+                            <ListBox.Styles>
+                                <Style Selector="ListBoxItem">
+                                    <Setter Property="Padding" Value="15,10"/>
+                                    <Setter Property="CornerRadius" Value="8"/>
+                                    <Setter Property="Foreground" Value="#888888"/>
+                                </Style>
+                                <Style Selector="ListBoxItem:selected">
+                                    <Setter Property="Background" Value="#11ffffff"/>
+                                    <Setter Property="Foreground" Value="#ffffff"/>
+                                </Style>
+                            </ListBox.Styles>
+                            <ListBoxItem IsSelected="True">
+                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                    <PathIcon Data="{StaticResource library_regular}" Width="16"/>
+                                    <TextBlock Text="My Library" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </ListBoxItem>
+                        </ListBox>
+
+                        <Separator Background="#11ffffff" Margin="10,20"/>
+                        <TextBlock Text="QUICK COLORS" FontSize="10" Foreground="#666666" Margin="15,0,0,10" FontWeight="Bold" LetterSpacing="1"/>
+                        <UniformGrid Columns="4" Margin="10,0">
+                            <Button Classes="ColorSwatch" Background="#111111" Click="AddColor_Click" Tag="#111111"/>
+                            <Button Classes="ColorSwatch" Background="#333333" Click="AddColor_Click" Tag="#333333"/>
+                            <Button Classes="ColorSwatch" Background="#2c3e50" Click="AddColor_Click" Tag="#2c3e50"/>
+                            <Button Classes="ColorSwatch" Background="#8e44ad" Click="AddColor_Click" Tag="#8e44ad"/>
+                        </UniformGrid>
+                    </StackPanel>
+
+                    <!-- Footer Add -->
+                    <Button Grid.Row="2" Margin="30" Width="180" Height="40" Background="#E0E0E0" CornerRadius="8" Click="AddNew_Click">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+                            <TextBlock Text="+" FontSize="20" FontWeight="Light" Foreground="#121212" Margin="0,-2,0,0"/>
+                            <TextBlock Text="ADD NEW" FontWeight="Bold" Foreground="#121212" VerticalAlignment="Center" FontSize="12"/>
+                        </StackPanel>
+                    </Button>
+                </Grid>
+            </Border>
+
+            <!-- Main Content -->
+            <Border Grid.Column="1" Background="#f2181818">
+                <Grid RowDefinitions="Auto, *">
+                    <Border Grid.Row="0" Margin="30,20,30,0">
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="Library" FontSize="32" FontWeight="Bold" Foreground="#E0E0E0"/>
+                            <TextBlock Text="Select a wallpaper to apply or right-click to manage." FontSize="13" Foreground="#666666"/>
+                        </StackPanel>
+                    </Border>
+
+                    <ScrollViewer Grid.Row="1" Margin="15,15,15,30">
+                        <ItemsControl x:Name="LibraryItemsControl">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel Margin="5"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="local:WallpaperPreset">
+                                    <Button Classes="Card" Margin="10" Padding="0" Background="Transparent" BorderThickness="0" Click="Preset_Click">
+                                        <!-- Context Menu -->
+                                        <Button.ContextMenu>
+                                            <ContextMenu>
+                                                <MenuItem Header="Delete Preset" Click="DeletePreset_Click" Foreground="#ff5555"/>
+                                            </ContextMenu>
+                                        </Button.ContextMenu>
+                                        
+                                        <Border Width="280" Background="#08ffffff" CornerRadius="12" BorderBrush="{Binding IsActive, Converter={StaticResource ActiveColorConverter}}" BorderThickness="1" ClipToBounds="True">
+                                            <StackPanel>
+                                                <!-- Cinematic 16:9 Preview Layer -->
+                                                <Panel Height="157"> <!-- 280 / (16/9) = ~157 -->
+                                                    <!-- Color Preview -->
+                                                    <Border Background="{Binding Converter={StaticResource ThumbnailConverter}}" />
+                                                    
+                                                    <!-- Image Preview -->
+                                                    <Image Source="{Binding Converter={StaticResource ThumbnailConverter}}" Stretch="UniformToFill"/>
+                                                    
+                                                    <!-- Overlay for Video Icons -->
+                                                    <Border Background="#22000000" IsVisible="{Binding Type, Converter={x:Static local:TypeToVisibilityConverter.Instance}, ConverterParameter=Video}">
+                                                        <PathIcon Data="{StaticResource video_regular}" Opacity="0.5" Width="40" Height="40" Foreground="White"/>
+                                                    </Border>
+                                                </Panel>
+                                                
+                                                <!-- Info -->
+                                                <StackPanel Margin="15,12" Spacing="2">
+                                                    <TextBlock Text="{Binding Name}" Foreground="#E0E0E0" FontWeight="SemiBold" FontSize="13" TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Text="{Binding Type}" Foreground="#666666" FontSize="11"/>
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Border>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
 
     <Window.Styles>
         <Style Selector="Button.Card:pointerover Border">
@@ -140,7 +153,6 @@
         </Style>
         <Style Selector="Button.ColorSwatch:pointerover">
             <Setter Property="BorderBrush" Value="#E0E0E0"/>
-            <Setter Property="BorderThickness" Value="1"/>
         </Style>
     </Window.Styles>
 </Window>
