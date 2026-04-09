@@ -19,11 +19,17 @@
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
     </PackageReference>
     <PackageReference Include="LibVLCSharp.Avalonia" Version="3.9.6" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="4.8.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.23" />
   </ItemGroup>
 
   <ItemGroup>
     <AvaloniaResource Include="assets\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="wallpapers\**\*.cs" />
+    <None Include="wallpapers\**\*.cs" />
   </ItemGroup>
 </Project>

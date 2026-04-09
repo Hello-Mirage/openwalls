@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -12,6 +13,7 @@ using Avalonia.Data.Converters;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Input;
+using Avalonia.Threading;
 
 namespace openwalls;
 
@@ -29,8 +31,20 @@ public partial class SettingsWindow : Window
         LoadLibrary();
     }
 
+    private void NavList_SelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (LibraryView == null || MarketplaceView == null) return;
+        LibraryView.IsVisible = NavList.SelectedIndex == 0;
+        MarketplaceView.IsVisible = NavList.SelectedIndex == 1;
+    }
+
     private void LoadLibrary()
     {
+        // 1. Ensure directories exist
+        if (!Directory.Exists(WallpaperConfig.BaseDir)) Directory.CreateDirectory(WallpaperConfig.BaseDir);
+        if (!Directory.Exists(WallpaperConfig.LibraryDir)) Directory.CreateDirectory(WallpaperConfig.LibraryDir);
+
+        // 2. Load core config (Current active ID, etc)
         if (File.Exists(WallpaperConfig.ConfigPath))
         {
             try
@@ -41,68 +55,82 @@ public partial class SettingsWindow : Window
             catch { _config = new WallpaperConfig(); }
         }
 
-        _library = new ObservableCollection<WallpaperPreset>(_config.Library);
-        
-        // Ensure default starchild/plasma are in library if missing (strict check)
-        EnsureProceduralDefault("starfield", "Deep Space");
-        EnsureProceduralDefault("plasma", "Neon Plasma");
+        // 3. Scan Modular Library
+        var allPresets = new List<WallpaperPreset>();
+        var folders = Directory.GetDirectories(WallpaperConfig.LibraryDir);
+        foreach (var folder in folders)
+        {
+            var metaPath = Path.Combine(folder, "wallpaper.json");
+            if (File.Exists(metaPath))
+            {
+                try
+                {
+                    var preset = JsonConvert.DeserializeObject<WallpaperPreset>(File.ReadAllText(metaPath));
+                    if (preset != null)
+                    {
+                        preset.BaseDirectory = folder;
+                        allPresets.Add(preset);
+                    }
+                }
+                catch { }
+            }
+        }
 
-        // Cleanup any accidental duplicates from previous runs
-        CleanupDuplicates();
+        // 4. Handle Migration/Default injection if library is empty
+        if (allPresets.Count == 0)
+        {
+            InitializeDefaultFolders();
+            // Re-scan after initializing defaults
+            LoadLibrary(); 
+            return;
+        }
 
-        // Sync Initial Active State
+        _library = new ObservableCollection<WallpaperPreset>(allPresets.OrderByDescending(p => p.DateAdded));
+        _config.Library = allPresets;
+
         foreach (var p in _library) p.IsActive = (p.Id == _config.CurrentPresetId);
         
         LibraryItemsControl.ItemsSource = _library;
     }
 
-    private void EnsureProceduralDefault(string id, string name)
+    private void InitializeDefaultFolders()
     {
-        if (!_config.Library.Any(p => p.ProceduralId == id))
+        var defaults = new List<WallpaperPreset>
         {
-            var p = new WallpaperPreset { Name = name, Type = WallpaperType.Procedural, ProceduralId = id };
-            _config.Library.Insert(0, p);
-            _library.Insert(0, p);
-        }
-    }
+            new WallpaperPreset { Name = "Zen Clock", Type = WallpaperType.Clock, ClockImagePath = "samurai.jpg" },
+            new WallpaperPreset { Name = "Deep Space", Type = WallpaperType.Procedural, ProceduralId = "starfield" },
+            new WallpaperPreset { Name = "Matrix Code", Type = WallpaperType.Procedural, ProceduralId = "matrix" },
+            new WallpaperPreset { Name = "Neural Swarm", Type = WallpaperType.Procedural, ProceduralId = "swarm" }
+        };
 
-    private void CleanupDuplicates()
-    {
-        var seenIds = new HashSet<string>();
-        var toRemove = new List<WallpaperPreset>();
-
-        foreach (var p in _config.Library)
+        foreach (var d in defaults)
         {
-            if (!string.IsNullOrEmpty(p.ProceduralId))
+            var folder = Path.Combine(WallpaperConfig.LibraryDir, d.Name.Replace(" ", ""));
+            if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
+            
+            d.BaseDirectory = folder;
+            
+            // Move asset if it exists in root
+            if (d.Type == WallpaperType.Clock)
             {
-                if (seenIds.Contains(p.ProceduralId)) toRemove.Add(p);
-                else seenIds.Add(p.ProceduralId);
+                var src = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "assets/samurai-warrior-observing-village-moonlight.jpg");
+                if (File.Exists(src)) File.Copy(src, Path.Combine(folder, "samurai.jpg"), true);
             }
-        }
 
-        foreach (var p in toRemove)
-        {
-            _config.Library.Remove(p);
-            _library.Remove(p);
+            File.WriteAllText(Path.Combine(folder, "wallpaper.json"), JsonConvert.SerializeObject(d, Formatting.Indented));
         }
-        
-        if (toRemove.Count > 0) SaveConfig();
     }
 
     private void AddColor_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is Button btn && btn.Tag is string hex)
         {
-            var preset = new WallpaperPreset
-            {
-                Name = $"Color {hex}",
-                Color = hex,
-                Type = WallpaperType.Color
-            };
-
-            _library.Add(preset);
-            _config.Library.Add(preset);
-            SaveConfig();
+            var preset = new WallpaperPreset { Name = $"Color {hex}", Color = hex, Type = WallpaperType.Color };
+            // Save as modular folder
+            var folder = Path.Combine(WallpaperConfig.LibraryDir, $"Color_{hex.Replace("#", "")}");
+            if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
+            File.WriteAllText(Path.Combine(folder, "wallpaper.json"), JsonConvert.SerializeObject(preset, Formatting.Indented));
+            LoadLibrary();
         }
     }
 
@@ -113,33 +141,28 @@ public partial class SettingsWindow : Window
 
         var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "Add New Wallpaper to Library",
+            Title = "Add New Wallpaper (Plug and Play)",
             AllowMultiple = true,
-            FileTypeFilter = new[] 
-            { 
-                new FilePickerFileType("Media Files") { Patterns = new[] { "*.jpg", "*.png", "*.jpeg", "*.mp4", "*.mkv", "*.mov", "*.avi" } } 
-            }
+            FileTypeFilter = new[] { new FilePickerFileType("Media Files") { Patterns = new[] { "*.jpg", "*.png", "*.jpeg", "*.mp4", "*.mkv", "*.mov", "*.avi" } } }
         });
 
         foreach (var file in files)
         {
             var path = file.Path.LocalPath;
             var ext = Path.GetExtension(path).ToLower();
-            var type = (ext == ".mp4" || ext == ".mkv" || ext == ".mov" || ext == ".avi") 
-                ? WallpaperType.Video : WallpaperType.Image;
+            var type = (ext == ".mp4" || ext == ".mkv" || ext == ".mov" || ext == ".avi") ? WallpaperType.Video : WallpaperType.Image;
+            
+            var name = Path.GetFileNameWithoutExtension(path);
+            var folder = Path.Combine(WallpaperConfig.LibraryDir, name.Replace(" ", "_") + "_" + Guid.NewGuid().ToString().Substring(0, 4));
+            Directory.CreateDirectory(folder);
 
-            var preset = new WallpaperPreset
-            {
-                Name = Path.GetFileNameWithoutExtension(path),
-                Path = path,
-                Type = type
-            };
+            var destFile = "backdrop" + ext;
+            File.Copy(path, Path.Combine(folder, destFile), true);
 
-            _library.Add(preset);
-            _config.Library.Add(preset);
+            var preset = new WallpaperPreset { Name = name, Path = destFile, Type = type };
+            File.WriteAllText(Path.Combine(folder, "wallpaper.json"), JsonConvert.SerializeObject(preset, Formatting.Indented));
         }
-
-        SaveConfig();
+        LoadLibrary();
     }
 
     private void Preset_Click(object? sender, RoutedEventArgs e)
@@ -147,12 +170,37 @@ public partial class SettingsWindow : Window
         if (sender is Button btn && btn.DataContext is WallpaperPreset preset)
         {
             _config.CurrentPresetId = preset.Id;
-            
-            // Update Active States
             foreach (var p in _library) p.IsActive = (p.Id == preset.Id);
-            
             SaveConfig();
             WallpaperChanged?.Invoke(_config);
+        }
+    }
+
+    private async void ChangeClockImage_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem item && item.DataContext is WallpaperPreset preset && preset.Type == WallpaperType.Clock)
+        {
+            var topLevel = GetTopLevel(this);
+            if (topLevel == null) return;
+
+            var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                Title = $"Choose Backdrop for {preset.Name}",
+                FileTypeFilter = new[] { FilePickerFileTypes.ImageAll }
+            });
+
+            if (files.Any())
+            {
+                var src = files.First().Path.LocalPath;
+                var ext = Path.GetExtension(src);
+                var dest = Path.Combine(preset.BaseDirectory!, "custom_bg" + ext);
+                File.Copy(src, dest, true);
+                
+                preset.ClockImagePath = "custom_bg" + ext;
+                File.WriteAllText(Path.Combine(preset.BaseDirectory!, "wallpaper.json"), JsonConvert.SerializeObject(preset, Formatting.Indented));
+                
+                WallpaperChanged?.Invoke(_config);
+            }
         }
     }
 
@@ -172,29 +220,15 @@ public partial class SettingsWindow : Window
             if (files.Any())
             {
                 var sourcePath = files.First().Path.LocalPath;
-                var thumbDir = Path.Combine(Path.GetDirectoryName(WallpaperConfig.ConfigPath)!, "thumbnails");
-                if (!Directory.Exists(thumbDir)) Directory.CreateDirectory(thumbDir);
-
                 var ext = Path.GetExtension(sourcePath);
-                var destPath = Path.Combine(thumbDir, $"{preset.Id}{ext}");
+                var destPath = Path.Combine(preset.BaseDirectory!, "thumbnail" + ext);
 
-                try
-                {
-                    File.Copy(sourcePath, destPath, true);
-                    preset.ThumbnailPath = destPath;
-                    
-                    // Clear cache for this path to force reload
-                    ThumbnailConverter.ClearCache(destPath);
-                    
-                    SaveConfig();
-                    // Pulse the UI to refresh
-                    var idx = _library.IndexOf(preset);
-                    if (idx != -1) { _library.RemoveAt(idx); _library.Insert(idx, preset); }
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"Failed to set thumbnail: {ex.Message}");
-                }
+                File.Copy(sourcePath, destPath, true);
+                preset.ThumbnailPath = "thumbnail" + ext;
+                File.WriteAllText(Path.Combine(preset.BaseDirectory!, "wallpaper.json"), JsonConvert.SerializeObject(preset, Formatting.Indented));
+                
+                ThumbnailConverter.ClearCache(Path.Combine(preset.BaseDirectory!, "thumbnail" + ext));
+                LoadLibrary();
             }
         }
     }
@@ -203,41 +237,27 @@ public partial class SettingsWindow : Window
     {
         if (sender is MenuItem item && item.DataContext is WallpaperPreset preset)
         {
-            _library.Remove(preset);
-            _config.Library.RemoveAll(p => p.Id == preset.Id);
-            
-            // Cleanup thumb if exists
-            if (!string.IsNullOrEmpty(preset.ThumbnailPath) && File.Exists(preset.ThumbnailPath))
+            if (Directory.Exists(preset.BaseDirectory))
             {
-                try { File.Delete(preset.ThumbnailPath); } catch { }
+                try { Directory.Delete(preset.BaseDirectory, true); } catch { }
             }
-            
-            SaveConfig();
+            LoadLibrary();
         }
     }
 
     private void DragStrip_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
-        {
-            this.BeginMoveDrag(e);
-        }
+        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) this.BeginMoveDrag(e);
     }
 
     private void SaveConfig()
     {
         try
         {
-            string dir = Path.GetDirectoryName(WallpaperConfig.ConfigPath)!;
-            if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
-            
             string json = JsonConvert.SerializeObject(_config, Formatting.Indented);
             File.WriteAllText(WallpaperConfig.ConfigPath, json);
         }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"Failed to save config: {ex.Message}");
-        }
+        catch { }
     }
 }
 
@@ -245,16 +265,15 @@ public class ActiveColorConverter : IValueConverter
 {
     public object Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
     {
-        bool isActive = value is bool b && b;
-        return isActive ? Brush.Parse("White") : Brush.Parse("Transparent");
+        return (value is bool b && b) ? Brush.Parse("White") : Brush.Parse("Transparent");
     }
-
     public object ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) => throw new NotImplementedException();
 }
 
 public class ThumbnailConverter : IValueConverter
 {
     private static Dictionary<string, Bitmap> _cache = new();
+    private static HashSet<string> _loading = new();
 
     public static void ClearCache(string path) => _cache.Remove(path);
 
@@ -265,32 +284,45 @@ public class ThumbnailConverter : IValueConverter
             if (preset.Type == WallpaperType.Procedural)
             {
                 if (preset.ProceduralId == "starfield") return Brush.Parse("#000033");
-                if (preset.ProceduralId == "plasma") return Brush.Parse("#330033");
+                if (preset.ProceduralId == "matrix") return Brush.Parse("#002200");
+                if (preset.ProceduralId == "swarm") return Brush.Parse("#222222");
+                return Brush.Parse("#333333");
             }
 
-            // 1. Check for custom thumbnail first
-            string? thumbPath = !string.IsNullOrEmpty(preset.ThumbnailPath) ? preset.ThumbnailPath : 
-                               (preset.Type == WallpaperType.Image ? preset.Path : null);
+            string? thumbRel = !string.IsNullOrEmpty(preset.ThumbnailPath) ? preset.ThumbnailPath : 
+                               (preset.Type == WallpaperType.Image ? preset.Path : 
+                               (preset.Type == WallpaperType.Clock ? preset.ClockImagePath : null));
+
+            string? thumbPath = preset.GetResourcePath(thumbRel);
 
             if (!string.IsNullOrEmpty(thumbPath) && File.Exists(thumbPath))
             {
                 if (_cache.TryGetValue(thumbPath, out var cached)) return cached;
                 
-                try
+                if (!_loading.Contains(thumbPath))
                 {
-                    using var stream = File.OpenRead(thumbPath);
-                    var bitmap = Bitmap.DecodeToWidth(stream, 400);
-                    _cache[thumbPath] = bitmap;
-                    return bitmap;
+                    _loading.Add(thumbPath);
+                    var currentPath = thumbPath;
+                    Task.Run(() =>
+                    {
+                        try
+                        {
+                            using var stream = File.OpenRead(currentPath);
+                            var bitmap = Bitmap.DecodeToWidth(stream, 400);
+                            _cache[currentPath] = bitmap;
+                            Dispatcher.UIThread.Post(() => 
+                            {
+                                _loading.Remove(currentPath);
+                                preset.ThumbnailPath = preset.ThumbnailPath; // Trigger UI refresh
+                            });
+                        }
+                        catch { Dispatcher.UIThread.Post(() => _loading.Remove(currentPath!)); }
+                    });
                 }
-                catch { return null; }
+                return null;
             }
 
-            // 2. Fallback to Color
-            if (preset.Type == WallpaperType.Color && !string.IsNullOrEmpty(preset.Color))
-            {
-                return Brush.Parse(preset.Color);
-            }
+            if (preset.Type == WallpaperType.Color && !string.IsNullOrEmpty(preset.Color)) return Brush.Parse(preset.Color);
         }
         return null;
     }
@@ -301,15 +333,9 @@ public class ThumbnailConverter : IValueConverter
 public class TypeToVisibilityConverter : IValueConverter
 {
     public static readonly TypeToVisibilityConverter Instance = new();
-
     public object Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
     {
-        if (value is WallpaperType type && parameter is string target)
-        {
-            return type.ToString() == target;
-        }
-        return false;
+        return (value is WallpaperType type && parameter is string target) ? type.ToString() == target : false;
     }
-
     public object ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) => throw new NotImplementedException();
 }

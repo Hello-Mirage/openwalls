@@ -2,6 +2,8 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
@@ -13,11 +15,9 @@ using LibVLCSharp.Shared;
 
 namespace openwalls;
 
-// Custom Control to handle procedural rendering
 public class ProceduralCanvas : Control
 {
     public ProceduralRenderer? Renderer { get; set; }
-    
     public override void Render(DrawingContext context)
     {
         Renderer?.Render(context, Bounds.Size);
@@ -29,10 +29,16 @@ public partial class MainWindow : Window
 {
     private LibVLC? _libVLC;
     private MediaPlayer? _mediaPlayer;
-    private DispatcherTimer? _optimizationTimer;
     private bool _isOptimizationPaused = false;
     private uint _ownProcessId;
     private WallpaperConfig _config = new();
+    
+    // Multi-threading
+    private CancellationTokenSource? _optimizationCts;
+    private Task? _optimizationTask;
+    
+    // Zen Clock Timer
+    private DispatcherTimer? _clockTimer;
     
     private int _screenWidth;
     private int _screenHeight;
@@ -70,94 +76,112 @@ public partial class MainWindow : Window
             }
         }
 
-        // Initialize Procedural Engine
         _proceduralRenderer = new ProceduralRenderer(ProceduralLayer);
         ProceduralLayer.Renderer = _proceduralRenderer;
 
-        // Initialize LibVLC
         Core.Initialize();
         _libVLC = new LibVLC();
         _mediaPlayer = new MediaPlayer(_libVLC);
         VideoLayer.MediaPlayer = _mediaPlayer;
 
-        // Setup Optimization Timer
-        _optimizationTimer = new DispatcherTimer(TimeSpan.FromSeconds(1), DispatcherPriority.Background, CheckForMaximization);
-        _optimizationTimer.Start();
+        // Zen Clock Timer (1s updates)
+        _clockTimer = new DispatcherTimer(TimeSpan.FromSeconds(1), DispatcherPriority.Background, UpdateClock);
+        _clockTimer.Start();
 
-        // Load initial config
+        StartBackgroundOptimization();
         LoadConfig();
     }
 
-    private void CheckForMaximization(object? sender, EventArgs e)
+    private void UpdateClock(object? sender, EventArgs e)
     {
-        bool anyCovering = false;
-        string triggerInfo = "";
-        
-        Win32Api.EnumWindows((hwnd, lParam) =>
+        if (ClockLayer.IsVisible)
         {
-            if (!Win32Api.IsWindowVisible(hwnd) || Win32Api.IsIconic(hwnd)) return true;
-            Win32Api.GetWindowThreadProcessId(hwnd, out uint pid);
-            if (pid == _ownProcessId) return true;
-
-            StringBuilder titleBuilder = new StringBuilder(256);
-            Win32Api.GetWindowText(hwnd, titleBuilder, titleBuilder.Capacity);
-            string title = titleBuilder.ToString().Trim();
-            if (string.IsNullOrWhiteSpace(title) || title.Equals("Settings", StringComparison.OrdinalIgnoreCase)) return true;
-
-            long exStyle = Win32Api.GetWindowLongPtr(hwnd, Win32Api.GWL_EXSTYLE).ToInt64();
-            bool isAppWindow = (exStyle & Win32Api.WS_EX_APPWINDOW) != 0;
-            bool isToolWindow = (exStyle & Win32Api.WS_EX_TOOLWINDOW) != 0;
-            IntPtr owner = Win32Api.GetWindow(hwnd, Win32Api.GW_OWNER);
-
-            bool isTaskbarWindow = isAppWindow || (!isToolWindow && owner == IntPtr.Zero);
-            if (!isTaskbarWindow) return true;
-
-            StringBuilder className = new StringBuilder(256);
-            Win32Api.GetClassName(hwnd, className, className.Capacity);
-            string cls = className.ToString();
-            if (cls == "Progman" || cls == "WorkerW" || cls == "Shell_TrayWnd" || cls == "Windows.UI.Core.CoreWindow") return true;
-
-            var placement = new Win32Api.WINDOWPLACEMENT();
-            placement.length = Marshal.SizeOf<Win32Api.WINDOWPLACEMENT>();
-            Win32Api.GetWindowPlacement(hwnd, ref placement);
-            
-            bool isMaximized = (placement.showCmd == Win32Api.SW_SHOWMAXIMIZED);
-            bool isFullSize = false;
-
-            Win32Api.RECT rect;
-            if (Win32Api.GetWindowRect(hwnd, out rect))
-            {
-                int w = rect.Right - rect.Left;
-                int h = rect.Bottom - rect.Top;
-                if (w >= _screenWidth - 10 && h >= _screenHeight - 80) isFullSize = true;
-            }
-
-            if (isMaximized || isFullSize)
-            {
-                anyCovering = true;
-                triggerInfo = $"Title: {title}, State: {(isMaximized ? "Maximized" : "Snapped")}";
-                return false; 
-            }
-
-            return true;
-        }, IntPtr.Zero);
-
-        if (anyCovering && !_isOptimizationPaused)
-        {
-            PausePlayback(triggerInfo);
+            var now = DateTime.Now;
+            ClockTime.Text = now.ToString("HH:mm");
+            ClockDate.Text = now.ToString("dddd, MMMM dd").ToUpper();
         }
-        else if (!anyCovering && _isOptimizationPaused)
+    }
+
+    private void StartBackgroundOptimization()
+    {
+        _optimizationCts = new CancellationTokenSource();
+        var token = _optimizationCts.Token;
+
+        _optimizationTask = Task.Run(async () =>
         {
-            ResumePlayback();
-        }
+            while (!token.IsCancellationRequested)
+            {
+                bool anyCovering = false;
+                string triggerInfo = "";
+
+                Win32Api.EnumWindows((hwnd, lParam) =>
+                {
+                    if (!Win32Api.IsWindowVisible(hwnd) || Win32Api.IsIconic(hwnd)) return true;
+                    Win32Api.GetWindowThreadProcessId(hwnd, out uint pid);
+                    if (pid == _ownProcessId) return true;
+
+                    StringBuilder titleBuilder = new StringBuilder(256);
+                    Win32Api.GetWindowText(hwnd, titleBuilder, titleBuilder.Capacity);
+                    string title = titleBuilder.ToString().Trim();
+                    if (string.IsNullOrWhiteSpace(title) || title.Equals("Settings", StringComparison.OrdinalIgnoreCase)) return true;
+
+                    long exStyle = Win32Api.GetWindowLongPtr(hwnd, Win32Api.GWL_EXSTYLE).ToInt64();
+                    bool isAppWindow = (exStyle & Win32Api.WS_EX_APPWINDOW) != 0;
+                    bool isToolWindow = (exStyle & Win32Api.WS_EX_TOOLWINDOW) != 0;
+                    IntPtr owner = Win32Api.GetWindow(hwnd, Win32Api.GW_OWNER);
+
+                    bool isTaskbarWindow = isAppWindow || (!isToolWindow && owner == IntPtr.Zero);
+                    if (!isTaskbarWindow) return true;
+
+                    StringBuilder className = new StringBuilder(256);
+                    Win32Api.GetClassName(hwnd, className, className.Capacity);
+                    string cls = className.ToString();
+                    if (cls == "Progman" || cls == "WorkerW" || cls == "Shell_TrayWnd" || cls == "Windows.UI.Core.CoreWindow") return true;
+
+                    var placement = new Win32Api.WINDOWPLACEMENT();
+                    placement.length = Marshal.SizeOf<Win32Api.WINDOWPLACEMENT>();
+                    Win32Api.GetWindowPlacement(hwnd, ref placement);
+                    
+                    bool isMaximized = (placement.showCmd == Win32Api.SW_SHOWMAXIMIZED);
+                    bool isFullSize = false;
+
+                    Win32Api.RECT rect;
+                    if (Win32Api.GetWindowRect(hwnd, out rect))
+                    {
+                        int w = rect.Right - rect.Left;
+                        int h = rect.Bottom - rect.Top;
+                        if (w >= _screenWidth - 10 && h >= _screenHeight - 80) isFullSize = true;
+                    }
+
+                    if (isMaximized || isFullSize)
+                    {
+                        anyCovering = true;
+                        triggerInfo = $"Title: {title}, State: {(isMaximized ? "Maximized" : "Snapped")}";
+                        return false; 
+                    }
+
+                    return true;
+                }, IntPtr.Zero);
+
+                if (anyCovering && !_isOptimizationPaused)
+                {
+                    await Dispatcher.UIThread.InvokeAsync(() => PausePlayback(triggerInfo));
+                }
+                else if (!anyCovering && _isOptimizationPaused)
+                {
+                    await Dispatcher.UIThread.InvokeAsync(() => ResumePlayback());
+                }
+
+                await Task.Delay(1000, token);
+            }
+        }, token);
     }
 
     private void PausePlayback(string info)
     {
         if (_mediaPlayer?.IsPlaying == true) _mediaPlayer.Pause();
-        _proceduralRenderer?.Stop(); // Stop procedural timer to save CPU
+        _proceduralRenderer?.Stop(); 
         _isOptimizationPaused = true;
-        Console.WriteLine($"[OPTIMIZATION] Pausing for: {info}");
     }
 
     private void ResumePlayback()
@@ -165,17 +189,14 @@ public partial class MainWindow : Window
         _isOptimizationPaused = false;
         if (_mediaPlayer != null && _mediaPlayer.Media != null) _mediaPlayer.Play();
         
-        // Restart procedural if it was active
         if (_config.CurrentPresetId != null)
         {
             var preset = _config.Library.FirstOrDefault(p => p.Id == _config.CurrentPresetId);
-            if (preset?.Type == WallpaperType.Procedural && !string.IsNullOrEmpty(preset.ProceduralId))
+            if (preset?.Type == WallpaperType.Procedural)
             {
-                _proceduralRenderer?.Start(preset.ProceduralId);
+                _proceduralRenderer?.Start(preset);
             }
         }
-
-        Console.WriteLine("[OPTIMIZATION] Resuming (Desktop visible)");
     }
 
     private void LoadConfig()
@@ -186,23 +207,15 @@ public partial class MainWindow : Window
             {
                 string json = File.ReadAllText(WallpaperConfig.ConfigPath);
                 _config = Newtonsoft.Json.JsonConvert.DeserializeObject<WallpaperConfig>(json) ?? new WallpaperConfig();
-                
-                // Ensure default starchild/plasma are in library if missing
-                if (!_config.Library.Any(p => p.ProceduralId == "starfield"))
-                    _config.Library.Add(new WallpaperPreset { Name = "Deep Space", Type = WallpaperType.Procedural, ProceduralId = "starfield" });
-                if (!_config.Library.Any(p => p.ProceduralId == "plasma"))
-                    _config.Library.Add(new WallpaperPreset { Name = "Neon Plasma", Type = WallpaperType.Procedural, ProceduralId = "plasma" });
-
-                if (_config.CurrentPresetId == null) _config.CurrentPresetId = _config.Library.First().Id;
-                
+                if (_config.CurrentPresetId == null && _config.Library.Any()) _config.CurrentPresetId = _config.Library.First().Id;
                 OnWallpaperChanged(_config);
             }
-            catch { /* Ignore invalid config */ }
+            catch { }
         }
         else
         {
-            _config = new WallpaperConfig(); 
-            if (_config.Library.Any()) _config.CurrentPresetId = _config.Library.First().Id;
+            _config = new WallpaperConfig();
+            _config.CurrentPresetId = _config.Library.First().Id;
             OnWallpaperChanged(_config);
         }
     }
@@ -212,11 +225,11 @@ public partial class MainWindow : Window
         _config = config;
         var preset = config.Library.FirstOrDefault(p => p.Id == config.CurrentPresetId);
         
-        // Reset layers
         ColorLayer.IsVisible = false;
         ImageLayer.IsVisible = false;
         VideoLayer.IsVisible = false;
         ProceduralLayer.IsVisible = false;
+        ClockLayer.IsVisible = false;
         FallbackText.IsVisible = false;
         ImageLayer.Opacity = 0;
         VideoLayer.Opacity = 0;
@@ -225,64 +238,40 @@ public partial class MainWindow : Window
         _proceduralRenderer?.Stop();
         _isOptimizationPaused = false;
 
-        if (preset == null)
-        {
-            FallbackText.IsVisible = true;
-            return;
-        }
+        if (preset == null) { FallbackText.IsVisible = true; return; }
 
         switch (preset.Type)
         {
             case WallpaperType.Color:
-                if (!string.IsNullOrEmpty(preset.Color))
-                {
-                    ColorLayer.Background = SolidColorBrush.Parse(preset.Color);
-                    ColorLayer.IsVisible = true;
-                }
-                else FallbackText.IsVisible = true;
+                if (!string.IsNullOrEmpty(preset.Color)) { ColorLayer.Background = SolidColorBrush.Parse(preset.Color); ColorLayer.IsVisible = true; }
                 break;
-
             case WallpaperType.Image:
-                if (!string.IsNullOrEmpty(preset.Path) && File.Exists(preset.Path))
-                {
-                    try
-                    {
-                        ImageLayer.Source = new Bitmap(preset.Path);
-                        ImageLayer.IsVisible = true;
-                        ImageLayer.Opacity = 1;
-                    }
-                    catch { FallbackText.IsVisible = true; }
-                }
-                else FallbackText.IsVisible = true;
+                var imgPath = preset.GetResourcePath(preset.Path);
+                if (!string.IsNullOrEmpty(imgPath) && File.Exists(imgPath)) { ImageLayer.Source = new Bitmap(imgPath); ImageLayer.IsVisible = true; ImageLayer.Opacity = 1; }
                 break;
-
             case WallpaperType.Video:
-                if (!string.IsNullOrEmpty(preset.Path) && File.Exists(preset.Path))
+                var videoPath = preset.GetResourcePath(preset.Path);
+                if (!string.IsNullOrEmpty(videoPath) && File.Exists(videoPath))
                 {
-                    try
-                    {
-                        using var media = new Media(_libVLC!, preset.Path, FromType.FromPath);
-                        media.AddOption(":input-repeat=65535"); // Loop
-                        if (preset.IsMuted) _mediaPlayer!.Mute = true;
-                        
-                        VideoLayer.IsVisible = true;
-                        VideoLayer.Opacity = 1;
-                        _mediaPlayer!.Play(media);
-                    }
-                    catch { FallbackText.IsVisible = true; }
+                    using var media = new Media(_libVLC!, videoPath, FromType.FromPath);
+                    media.AddOption(":input-repeat=65535");
+                    if (preset.IsMuted) _mediaPlayer!.Mute = true;
+                    VideoLayer.IsVisible = true;
+                    VideoLayer.Opacity = 1;
+                    _mediaPlayer!.Play(media);
                 }
-                else FallbackText.IsVisible = true;
                 break;
-
             case WallpaperType.Procedural:
-                if (!string.IsNullOrEmpty(preset.ProceduralId))
-                {
-                    ProceduralLayer.IsVisible = true;
-                    _proceduralRenderer?.Start(preset.ProceduralId);
-                }
-                else FallbackText.IsVisible = true;
+                ProceduralLayer.IsVisible = true; 
+                _proceduralRenderer?.Start(preset); 
                 break;
-
+            case WallpaperType.Clock:
+                var clockPath = preset.GetResourcePath(preset.ClockImagePath ?? "assets/samurai-warrior-observing-village-moonlight.jpg");
+                if (File.Exists(clockPath)) ClockBackground.Source = new Bitmap(clockPath);
+                else if (File.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, clockPath))) ClockBackground.Source = new Bitmap(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, clockPath));
+                ClockLayer.IsVisible = true;
+                UpdateClock(null, EventArgs.Empty);
+                break;
             default:
                 FallbackText.IsVisible = true;
                 break;
@@ -308,8 +297,9 @@ public partial class MainWindow : Window
 
     protected override void OnClosing(WindowClosingEventArgs e)
     {
-        _optimizationTimer?.Stop();
+        _optimizationCts?.Cancel();
         _proceduralRenderer?.Stop();
+        _clockTimer?.Stop();
         _mediaPlayer?.Dispose();
         _libVLC?.Dispose();
         base.OnClosing(e);

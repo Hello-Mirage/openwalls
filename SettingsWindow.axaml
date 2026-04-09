@@ -19,26 +19,22 @@
         <local:ThumbnailConverter x:Key="ThumbnailConverter"/>
         <!-- Fluent Icons -->
         <StreamGeometry x:Key="library_regular">M12,2A10,10,0,1,0,22,12,10.011,10.011,0,0,0,12,2Zm0,18a8,8,0,1,1,8-8A8.009,8.009,0,0,1,12,20ZM11,7h2v6H11Zm0,8h2v2H11Z</StreamGeometry>
-        <StreamGeometry x:Key="image_regular">M19,5H5A2,2,0,0,0,3,7V17a2,2,0,0,0,2,2H19a2,2,0,0,0,2-2V7A2,2,0,0,0,19,5Zm0,12H5V7H19ZM14.14,11.86,11.5,15.36l-1.64-2.15L7.5,17h9Z</StreamGeometry>
-        <StreamGeometry x:Key="video_regular">M19,5H5A2,2,0,0,0,3,7V17a2,2,0,0,0,2,2H19a2,2,0,0,0,2-2V7A2,2,0,0,0,19,5ZM16,13l-5,3V10l5,3Z</StreamGeometry>
+        <StreamGeometry x:Key="market_regular">M12,2L2,7v10l10,5 10-5V7L12,2zm0,2.18L19.34,7.5 12,10.82 4.66,7.5 12,4.18zM4,9.27l7,3.18v7.28l-7-3.5V9.27zm9,10.46v-7.28l7-3.18v7.5l-7,2.96z</StreamGeometry>
     </Window.Resources>
 
     <Grid RowDefinitions="Auto, *">
-        <!-- Top Drag Handle (Invisible but active) -->
         <Border Grid.Row="0" Height="40" Background="Transparent" IsHitTestVisible="True" PointerPressed="DragStrip_PointerPressed"/>
 
         <Grid Grid.Row="1" ColumnDefinitions="240, *">
             <!-- Sidebar -->
             <Border Grid.Column="0" Background="#f2121212" BorderBrush="#11ffffff" BorderThickness="0,0,1,0">
                 <Grid RowDefinitions="Auto, *, Auto">
-                    <!-- Branding -->
                     <StackPanel Grid.Row="0" Margin="30,20,30,30" Spacing="4">
                         <TextBlock Text="OPENWALLS" FontSize="20" FontWeight="Black" Foreground="#E0E0E0" LetterSpacing="3"/>
                     </StackPanel>
 
-                    <!-- Navigation -->
                     <StackPanel Grid.Row="1" Margin="15,0" Spacing="5">
-                        <ListBox x:Name="NavList" Background="Transparent" BorderThickness="0">
+                        <ListBox x:Name="NavList" Background="Transparent" BorderThickness="0" SelectionChanged="NavList_SelectionChanged">
                             <ListBox.Styles>
                                 <Style Selector="ListBoxItem">
                                     <Setter Property="Padding" Value="15,10"/>
@@ -56,6 +52,12 @@
                                     <TextBlock Text="My Library" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </ListBoxItem>
+                            <ListBoxItem>
+                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                    <PathIcon Data="{StaticResource market_regular}" Width="16"/>
+                                    <TextBlock Text="OWMarketplace" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </ListBoxItem>
                         </ListBox>
 
                         <Separator Background="#11ffffff" Margin="10,20"/>
@@ -68,7 +70,6 @@
                         </UniformGrid>
                     </StackPanel>
 
-                    <!-- Footer Add -->
                     <Button Grid.Row="2" Margin="30" Width="180" Height="40" Background="#E0E0E0" CornerRadius="8" Click="AddNew_Click">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
                             <TextBlock Text="+" FontSize="20" FontWeight="Light" Foreground="#121212" Margin="0,-2,0,0"/>
@@ -78,16 +79,16 @@
                 </Grid>
             </Border>
 
-            <!-- Main Content -->
-            <Border Grid.Column="1" Background="#f2181818">
-                <Grid RowDefinitions="Auto, *">
+            <!-- Main Content Area -->
+            <Grid Grid.Column="1" Background="#f2181818">
+                <!-- My Library View -->
+                <Grid x:Name="LibraryView" RowDefinitions="Auto, *" IsVisible="True">
                     <Border Grid.Row="0" Margin="30,20,30,0">
                         <StackPanel Spacing="10">
                             <TextBlock Text="Library" FontSize="32" FontWeight="Bold" Foreground="#E0E0E0"/>
-                            <TextBlock Text="Select a wallpaper to apply or right-click to manage." FontSize="13" Foreground="#666666"/>
+                            <TextBlock Text="Your collection of plug-and-play wallpapers." FontSize="13" Foreground="#666666"/>
                         </StackPanel>
                     </Border>
-
                     <ScrollViewer Grid.Row="1" Margin="15,15,15,30">
                         <ItemsControl x:Name="LibraryItemsControl">
                             <ItemsControl.ItemsPanel>
@@ -98,32 +99,20 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="local:WallpaperPreset">
                                     <Button Classes="Card" Margin="10" Padding="0" Background="Transparent" BorderThickness="0" Click="Preset_Click">
-                                        <!-- Context Menu -->
                                         <Button.ContextMenu>
                                             <ContextMenu>
                                                 <MenuItem Header="Set Thumbnail..." Click="SetThumbnail_Click" FontWeight="SemiBold"/>
+                                                <MenuItem Header="Change Image" Click="ChangeClockImage_Click" IsVisible="{Binding Type, Converter={x:Static local:TypeToVisibilityConverter.Instance}, ConverterParameter=Clock}" />
                                                 <Separator Background="#11ffffff"/>
                                                 <MenuItem Header="Delete Preset" Click="DeletePreset_Click" Foreground="#ff5555"/>
                                             </ContextMenu>
                                         </Button.ContextMenu>
-                                        
                                         <Border Width="280" Background="#08ffffff" CornerRadius="12" BorderBrush="{Binding IsActive, Converter={StaticResource ActiveColorConverter}}" BorderThickness="1" ClipToBounds="True">
                                             <StackPanel>
-                                                <!-- Cinematic 16:9 Preview Layer -->
-                                                <Panel Height="157"> <!-- 280 / (16/9) = ~157 -->
-                                                    <!-- Color Preview -->
+                                                <Panel Height="157">
                                                     <Border Background="{Binding Converter={StaticResource ThumbnailConverter}}" />
-                                                    
-                                                    <!-- Image Preview -->
                                                     <Image Source="{Binding Converter={StaticResource ThumbnailConverter}}" Stretch="UniformToFill"/>
-                                                    
-                                                    <!-- Overlay for Video Icons -->
-                                                    <Border Background="#22000000" IsVisible="{Binding Type, Converter={x:Static local:TypeToVisibilityConverter.Instance}, ConverterParameter=Video}">
-                                                        <PathIcon Data="{StaticResource video_regular}" Opacity="0.5" Width="40" Height="40" Foreground="White"/>
-                                                    </Border>
                                                 </Panel>
-                                                
-                                                <!-- Info -->
                                                 <StackPanel Margin="15,12" Spacing="2">
                                                     <TextBlock Text="{Binding Name}" Foreground="#E0E0E0" FontWeight="SemiBold" FontSize="13" TextTrimming="CharacterEllipsis"/>
                                                     <TextBlock Text="{Binding Type}" Foreground="#666666" FontSize="11"/>
@@ -136,7 +125,65 @@
                         </ItemsControl>
                     </ScrollViewer>
                 </Grid>
-            </Border>
+
+                <!-- OWMarketplace View -->
+                <Grid x:Name="MarketplaceView" RowDefinitions="Auto, *" IsVisible="False">
+                    <Border Grid.Row="0" Margin="30,40,30,0">
+                        <StackPanel Spacing="15">
+                            <TextBlock Text="OWMarketplace" FontSize="36" FontWeight="ExtraBold" Foreground="#E0E0E0" LetterSpacing="-1"/>
+                            <TextBlock Text="DISCOVER THE COMMUNITY LAB" FontSize="12" Foreground="#888888" FontWeight="Bold" LetterSpacing="2"/>
+                        </StackPanel>
+                    </Border>
+                    
+                    <ScrollViewer Grid.Row="1" Margin="30,20,30,30">
+                        <StackPanel Spacing="40">
+                            <!-- Hero Section -->
+                            <Border Height="200" CornerRadius="16" ClipToBounds="True">
+                                <Panel>
+                                    <Image Source="assets/samurai-warrior-observing-village-moonlight.jpg" Stretch="UniformToFill" Opacity="0.4"/>
+                                    <Border>
+                                        <Border.Background>
+                                            <LinearGradientBrush StartPoint="0%,100%" EndPoint="0%,0%">
+                                                <GradientStop Offset="0" Color="#f2181818"/>
+                                                <GradientStop Offset="1" Color="Transparent"/>
+                                            </LinearGradientBrush>
+                                        </Border.Background>
+                                    </Border>
+                                    <StackPanel VerticalAlignment="Bottom" Margin="30" Spacing="5">
+                                        <Border Background="#E0E0E0" CornerRadius="4" HorizontalAlignment="Left" Padding="8,4">
+                                            <TextBlock Text="FEATURED" FontSize="10" FontWeight="Black" Foreground="#121212"/>
+                                        </Border>
+                                        <TextBlock Text="The Samurai Series" FontSize="28" FontWeight="Bold" Foreground="White" />
+                                        <TextBlock Text="Download premium cinematic HUDs by Mirage." IsVisible="True" FontSize="14" Foreground="#888888"/>
+                                    </StackPanel>
+                                </Panel>
+                            </Border>
+
+                            <!-- Categories Simulation -->
+                            <StackPanel Spacing="20">
+                                <TextBlock Text="Trending Wallpapers" FontSize="18" FontWeight="Bold" Foreground="#E0E0E0"/>
+                                <WrapPanel>
+                                    <Border Width="180" Height="240" Background="#08ffffff" CornerRadius="12" Margin="0,0,15,0">
+                                        <StackPanel VerticalAlignment="Center" Spacing="10">
+                                            <PathIcon Data="{StaticResource market_regular}" Width="40" Height="40" Opacity="0.1"/>
+                                            <TextBlock Text="Cyber City" HorizontalAlignment="Center" Foreground="#444444"/>
+                                            <Button Content="INSTALL" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" Background="#11ffffff" Padding="15,5"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <!-- More Mockups -->
+                                    <Border Width="180" Height="240" Background="#08ffffff" CornerRadius="12" Margin="0,0,15,0">
+                                        <StackPanel VerticalAlignment="Center" Spacing="10">
+                                            <PathIcon Data="{StaticResource market_regular}" Width="40" Height="40" Opacity="0.1"/>
+                                            <TextBlock Text="Deep Sea 4K" HorizontalAlignment="Center" Foreground="#444444"/>
+                                            <Button Content="INSTALL" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" Background="#11ffffff" Padding="15,5"/>
+                                        </StackPanel>
+                                    </Border>
+                                </WrapPanel>
+                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Grid>
         </Grid>
     </Grid>
 
@@ -152,9 +199,6 @@
             <Setter Property="CornerRadius" Value="14"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="BorderBrush" Value="#11ffffff"/>
-        </Style>
-        <Style Selector="Button.ColorSwatch:pointerover">
-            <Setter Property="BorderBrush" Value="#E0E0E0"/>
         </Style>
     </Window.Styles>
 </Window>

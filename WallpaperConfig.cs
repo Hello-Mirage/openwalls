@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
 using System.Runtime.CompilerServices;
 using Newtonsoft.Json;
 
@@ -12,7 +13,8 @@ public enum WallpaperType
     Image,
     Video,
     Color,
-    Procedural
+    Procedural,
+    Clock
 }
 
 public class WallpaperPreset : INotifyPropertyChanged
@@ -44,6 +46,8 @@ public class WallpaperPreset : INotifyPropertyChanged
     }
 
     public string? ProceduralId { get; set; } // ID for C# animation engine
+    public string? ClockImagePath { get; set; } // Custom backdrop for Clock type
+    public string? BaseDirectory { get; set; } // Local folder path for modular wallpapers
     public WallpaperType Type { get; set; }
     public bool IsMuted { get; set; } = true;
     public DateTime DateAdded { get; set; } = DateTime.Now;
@@ -55,6 +59,14 @@ public class WallpaperPreset : INotifyPropertyChanged
         set { _isActive = value; OnPropertyChanged(); } 
     }
 
+    public string GetResourcePath(string? relativePath)
+    {
+        if (string.IsNullOrEmpty(relativePath)) return "";
+        if (System.IO.Path.IsPathRooted(relativePath)) return relativePath;
+        if (string.IsNullOrEmpty(BaseDirectory)) return relativePath;
+        return System.IO.Path.GetFullPath(System.IO.Path.Combine(BaseDirectory, relativePath));
+    }
+
     public event PropertyChangedEventHandler? PropertyChanged;
     protected void OnPropertyChanged([CallerMemberName] string? name = null) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
@@ -63,16 +75,23 @@ public class WallpaperPreset : INotifyPropertyChanged
 public class WallpaperConfig
 {
     public string? CurrentPresetId { get; set; }
-    public List<WallpaperPreset> Library { get; set; } = new List<WallpaperPreset>
-    {
-        new WallpaperPreset { Name = "Deep Space", Type = WallpaperType.Procedural, ProceduralId = "starfield" },
-        new WallpaperPreset { Name = "Neon Plasma", Type = WallpaperType.Procedural, ProceduralId = "plasma" }
-    };
+    public List<WallpaperPreset> Library { get; set; } = new List<WallpaperPreset>();
     
     public WallpaperType DefaultType { get; set; } = WallpaperType.Procedural;
     public string? DefaultPath { get; set; }
 
-    public static string ConfigPath => System.IO.Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), 
-        "openwalls", "config.json");
+    public static string BaseDir => System.IO.Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "openwalls");
+
+    public static string ConfigPath => System.IO.Path.Combine(BaseDir, "config.json");
+    
+    public static string LibraryDir
+    {
+        get
+        {
+            var localPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "wallpapers");
+            if (Directory.Exists(localPath)) return localPath;
+            return System.IO.Path.Combine(BaseDir, "wallpapers");
+        }
+    }
 }

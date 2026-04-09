@@ -1,128 +1,178 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Media;
 using Avalonia.Threading;
-using Avalonia.Controls;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Scripting;
+using Microsoft.CodeAnalysis.Scripting;
 
 namespace openwalls;
 
+public class WallpaperContext
+{
+    public DrawingContext dc { get; set; } = null!;
+    public Size Bounds { get; set; }
+    public TimeSpan Time { get; set; }
+    public float DeltaTime { get; set; }
+    public Random Rng { get; } = new();
+    public Dictionary<string, object> State { get; } = new();
+
+    public void DrawText(string text, Point pos, double size, IBrush foreground)
+    {
+        var ft = new FormattedText(text, System.Globalization.CultureInfo.CurrentCulture, 
+            FlowDirection.LeftToRight, Typeface.Default, size, foreground);
+        dc.DrawText(ft, pos);
+    }
+}
+
 public class ProceduralRenderer
 {
-    private readonly Control _target;
+    private readonly ProceduralCanvas _canvas;
     private DispatcherTimer? _timer;
-    private string? _currentId;
-    private Random _rng = new();
-    private double _time = 0;
+    private DateTime _startTime;
+    private DateTime _lastFrameTime;
+    private ScriptRunner<object>? _scriptRunner;
+    private WallpaperContext _ctx = new();
+    private bool _isLoaded = false;
+    private string? _securityError;
 
-    // Starfield Data
-    private List<Star> _stars = new();
-    private class Star { public double X, Y, Z, Size; public Color Color; }
+    public ProceduralRenderer(ProceduralCanvas canvas) => _canvas = canvas;
 
-    public ProceduralRenderer(Control target)
-    {
-        _target = target;
-    }
-
-    public void Start(string id)
+    public void Start(WallpaperPreset preset)
     {
         Stop();
-        _currentId = id;
-        _time = 0;
+        _securityError = null;
+        _isLoaded = false;
+        _startTime = DateTime.Now;
+        _lastFrameTime = DateTime.Now;
 
-        if (id == "starfield") InitializeStarfield();
+        Task.Run(async () =>
+        {
+            try
+            {
+                var scriptPath = Path.Combine(preset.BaseDirectory ?? "", "logic.cs");
+                if (!File.Exists(scriptPath)) return;
 
-        _timer = new DispatcherTimer(TimeSpan.FromMilliseconds(33), DispatcherPriority.Render, OnTick);
-        _timer.Start();
+                var code = File.ReadAllText(scriptPath);
+
+                // Phase 1: Static Security Scan (The "Forbidden Tongue" Scanner)
+                if (IsMalicious(code, out string violation))
+                {
+                    Dispatcher.UIThread.Post(() => {
+                        _securityError = $"SECURITY VIOLATION: {violation}";
+                        _isLoaded = true; // Show error HUD
+                        _canvas.InvalidateVisual();
+                    });
+                    return;
+                }
+
+                // Phase 2: Fragmented Whitelisting
+                // We only allow specific core assemblies. No System.IO, No System.Net, No Diagnostics.
+                var safeReferences = new[]
+                {
+                    MetadataReference.CreateFromFile(typeof(object).Assembly.Location),         // System.Runtime
+                    MetadataReference.CreateFromFile(typeof(Enumerable).Assembly.Location),     // System.Linq
+                    MetadataReference.CreateFromFile(typeof(DrawingContext).Assembly.Location), // Avalonia.Media
+                    MetadataReference.CreateFromFile(typeof(ProceduralRenderer).Assembly.Location) // openwalls API
+                };
+
+                var options = ScriptOptions.Default
+                    .WithReferences(safeReferences)
+                    .WithImports("System", "System.Linq", "System.Collections.Generic", "Avalonia", "Avalonia.Media", "openwalls");
+
+                var script = CSharpScript.Create(code, options, typeof(WallpaperContext));
+                _scriptRunner = script.CreateDelegate();
+                
+                Dispatcher.UIThread.Post(() => {
+                    _isLoaded = true;
+                    _timer = new DispatcherTimer(TimeSpan.FromMilliseconds(16), DispatcherPriority.Render, Tick);
+                    _timer.Start();
+                });
+            }
+            catch (Exception ex)
+            {
+                Dispatcher.UIThread.Post(() => {
+                    _securityError = $"COMPILATION ERROR: {ex.Message}";
+                    _isLoaded = true;
+                    _canvas.InvalidateVisual();
+                });
+            }
+        });
+    }
+
+    private bool IsMalicious(string code, out string violation)
+    {
+        violation = "";
+        var blacklisted = new[] { 
+            "System.IO", "File", "Directory", "Path.", "Stream",
+            "System.Net", "HttpClient", "WebClient", "Socket", "Http.", "Tcp.",
+            "System.Diagnostics", "Process", "Start(",
+            "Reflection", "GetType", "typeof", "Assembly", "Invoke", "FieldInfo", "PropertyInfo",
+            "DllImport", "extern", "unsafe", "fixed", "marshal",
+            "Environment", "Registry", "WriteAll", "Delete", "Move"
+        };
+
+        foreach (var token in blacklisted)
+        {
+            if (code.Contains(token, StringComparison.OrdinalIgnoreCase))
+            {
+                violation = $"Forbidden Token Detected: '{token}'";
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void Tick(object? sender, EventArgs e) => _canvas.InvalidateVisual();
+
+    public void Render(DrawingContext dc, Size bounds)
+    {
+        if (!_isLoaded) return;
+
+        if (_securityError != null)
+        {
+            var brush = new SolidColorBrush(Color.Parse("#44ff0000"));
+            dc.FillRectangle(brush, new Rect(bounds));
+            var ft = new FormattedText(_securityError, System.Globalization.CultureInfo.CurrentCulture, 
+                FlowDirection.LeftToRight, Typeface.Default, 24, Brushes.White);
+            dc.DrawText(ft, new Point(50, 50));
+            return;
+        }
+
+        if (_scriptRunner == null) return;
+
+        var now = DateTime.Now;
+        _ctx.dc = dc;
+        _ctx.Bounds = bounds;
+        _ctx.Time = now - _startTime;
+        _ctx.DeltaTime = (float)(now - _lastFrameTime).TotalSeconds;
+        _lastFrameTime = now;
+
+        try
+        {
+            _scriptRunner(_ctx).Wait();
+        }
+        catch (Exception ex)
+        {
+            _securityError = $"RUNTIME ERROR: {ex.InnerException?.Message ?? ex.Message}";
+            Stop();
+            _isLoaded = true;
+            _canvas.InvalidateVisual();
+        }
     }
 
     public void Stop()
     {
         _timer?.Stop();
-        _currentId = null;
-    }
-
-    private void InitializeStarfield()
-    {
-        _stars.Clear();
-        for (int i = 0; i < 200; i++)
-        {
-            _stars.Add(new Star
-            {
-                X = _rng.NextDouble() * 2000 - 1000,
-                Y = _rng.NextDouble() * 2000 - 1000,
-                Z = _rng.NextDouble() * 1000,
-                Size = _rng.NextDouble() * 2 + 1,
-                Color = Color.FromArgb(255, (byte)_rng.Next(200, 255), (byte)_rng.Next(200, 255), 255)
-            });
-        }
-    }
-
-    private void OnTick(object? sender, EventArgs e)
-    {
-        _time += 0.033;
-        _target.InvalidateVisual();
-    }
-
-    public void Render(DrawingContext dc, Size size)
-    {
-        if (_currentId == "starfield") RenderStarfield(dc, size);
-        else if (_currentId == "plasma") RenderPlasma(dc, size);
-    }
-
-    private void RenderStarfield(DrawingContext dc, Size size)
-    {
-        double centerX = size.Width / 2;
-        double centerY = size.Height / 2;
-
-        foreach (var star in _stars)
-        {
-            star.Z -= 2; // Move toward viewer
-            if (star.Z <= 0) star.Z = 1000;
-
-            double k = 128.0 / star.Z;
-            double px = star.X * k + centerX;
-            double py = star.Y * k + centerY;
-
-            if (px < 0 || px > size.Width || py < 0 || py > size.Height) continue;
-
-            double s = star.Size * k;
-            byte alpha = (byte)Math.Clamp(255 - (star.Z / 4), 0, 255);
-            var brush = new SolidColorBrush(Color.FromArgb(alpha, star.Color.R, star.Color.G, star.Color.B));
-            
-            dc.DrawEllipse(brush, null, new Point(px, py), s, s);
-        }
-    }
-
-    private void RenderPlasma(DrawingContext dc, Size size)
-    {
-        // Smooth plasma effect using moving gradients
-        var center = new Point(size.Width / 2, size.Height / 2);
-        
-        // Multiple moving blobs of color
-        for (int i = 0; i < 3; i++)
-        {
-            double phase = _time * 0.5 + (i * Math.PI * 0.6);
-            double x = Math.Sin(phase * 0.7) * (size.Width * 0.3) + center.X;
-            double y = Math.Cos(phase * 1.1) * (size.Height * 0.3) + center.Y;
-            double radius = (Math.Sin(_time * 0.3 + i) * 0.2 + 0.8) * (size.Width * 0.6);
-
-            var color = i switch
-            {
-                0 => Color.FromArgb(40, 78, 204, 163), // Mint
-                1 => Color.FromArgb(40, 15, 52, 96),   // Deep Blue
-                2 => Color.FromArgb(40, 26, 26, 46),   // Darkest
-                _ => Colors.Transparent
-            };
-
-            dc.DrawEllipse(new RadialGradientBrush
-            {
-                GradientStops = new GradientStops
-                {
-                    new GradientStop(color, 0),
-                    new GradientStop(Colors.Transparent, 1)
-                }
-            }, null, new Point(x, y), radius, radius);
-        }
+        _timer = null;
+        _scriptRunner = null;
+        _ctx.State.Clear();
+        _isLoaded = false;
+        _securityError = null;
     }
 }
