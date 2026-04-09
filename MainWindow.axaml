@@ -1,0 +1,57 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vlc="clr-namespace:LibVLCSharp.Avalonia;assembly=LibVLCSharp.Avalonia"
+        mc:Ignorable="d" d:DesignWidth="1920" d:DesignHeight="1080"
+        x:Class="openwalls.MainWindow"
+        Title="openwalls"
+        SystemDecorations="None"
+        WindowState="Maximized"
+        Background="Transparent"
+        Topmost="False"
+        ShowInTaskbar="False">
+    
+    <Grid>
+        <!-- Layer 0: Solid Color -->
+        <Border x:Name="ColorLayer" IsVisible="False" Background="Black"/>
+
+        <!-- Layer 1: Gradient (Fallback) -->
+        <Border x:Name="GradientLayer" IsVisible="True">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                    <GradientStop Offset="0" Color="#1a1a2e" />
+                    <GradientStop Offset="0.5" Color="#16213e" />
+                    <GradientStop Offset="1" Color="#0f3460" />
+                </LinearGradientBrush>
+            </Border.Background>
+        </Border>
+
+        <!-- Layer 2: Image -->
+        <Image x:Name="ImageLayer" Stretch="UniformToFill" IsVisible="False" Opacity="0"/>
+
+        <!-- Layer 3: Video -->
+        <vlc:VideoView x:Name="VideoLayer" IsVisible="False" Opacity="0"/>
+
+        <!-- Subtle Glow Overlays (Always on top of content) -->
+        <Canvas Opacity="0.3" IsHitTestVisible="False">
+            <Ellipse Width="600" Height="600" Canvas.Left="-100" Canvas.Top="-100">
+                <Ellipse.Fill>
+                    <RadialGradientBrush RadiusX="50%" RadiusY="50%">
+                        <GradientStop Offset="0" Color="#4ecca3" />
+                        <GradientStop Offset="1" Color="Transparent" />
+                    </RadialGradientBrush>
+                </Ellipse.Fill>
+            </Ellipse>
+        </Canvas>
+
+        <!-- Centered Label (Only if no content) -->
+        <StackPanel x:Name="FallbackText" VerticalAlignment="Center" HorizontalAlignment="Center" Opacity="0.5" IsVisible="True">
+            <TextBlock Text="OPENWALLS" FontSize="72" FontWeight="ExtraBold" Foreground="White" LetterSpacing="10" HorizontalAlignment="Center">
+                <TextBlock.Effect>
+                    <DropShadowEffect BlurRadius="20" Opacity="0.5" Color="Black" />
+                </TextBlock.Effect>
+            </TextBlock>
+        </StackPanel>
+    </Grid>
+</Window>
