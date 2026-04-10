@@ -1,3 +1,4 @@
+
 # Openwalls
 
 ![Banner](assets/openwalls_banner.svg)
@@ -24,7 +25,7 @@ Openwalls is a high-performance, modular wallpaper engine for Windows, designed 
 
 <img width="1913" height="1019" alt="image" src="https://github.com/user-attachments/assets/4b1a1841-516d-416a-9af3-a478cd098167" />
 
-
+![openwallgif](https://github.com/user-attachments/assets/d8699d83-dbbc-4363-989e-c159d91e20a1)
 
 
 ## Deployment and Contribution
