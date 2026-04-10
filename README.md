@@ -26,6 +26,7 @@ Openwalls is a high-performance, modular wallpaper engine for Windows, designed 
 
 
 
+
 ## Deployment and Contribution
 
 For developers and creators looking to build custom procedural wallpapers:
