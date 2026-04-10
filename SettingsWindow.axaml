@@ -173,26 +173,21 @@
                                 </Panel>
                             </Border>
 
-                            <!-- Categories Simulation -->
-                            <StackPanel Spacing="20">
-                                <TextBlock Text="Trending Wallpapers" FontSize="18" FontWeight="Bold" Foreground="#E0E0E0"/>
-                                <WrapPanel>
-                                    <Border Width="180" Height="240" Background="#08ffffff" CornerRadius="12" Margin="0,0,15,0">
-                                        <StackPanel VerticalAlignment="Center" Spacing="10">
-                                            <PathIcon Data="{StaticResource market_regular}" Width="40" Height="40" Opacity="0.1"/>
-                                            <TextBlock Text="Cyber City" HorizontalAlignment="Center" Foreground="#444444"/>
-                                            <Button Content="INSTALL" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" Background="#11ffffff" Padding="15,5"/>
-                                        </StackPanel>
-                                    </Border>
-                                    <!-- More Mockups -->
-                                    <Border Width="180" Height="240" Background="#08ffffff" CornerRadius="12" Margin="0,0,15,0">
-                                        <StackPanel VerticalAlignment="Center" Spacing="10">
-                                            <PathIcon Data="{StaticResource market_regular}" Width="40" Height="40" Opacity="0.1"/>
-                                            <TextBlock Text="Deep Sea 4K" HorizontalAlignment="Center" Foreground="#444444"/>
-                                            <Button Content="INSTALL" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" Background="#11ffffff" Padding="15,5"/>
-                                        </StackPanel>
-                                    </Border>
-                                </WrapPanel>
+                            <!-- Coming Soon Section -->
+                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,40,0,0" Spacing="20">
+                                <PathIcon Data="{StaticResource market_regular}" Width="60" Height="60" Opacity="0.1" Foreground="#888888"/>
+                                <StackPanel Spacing="5">
+                                    <TextBlock Text="COMMUNITY LAB COMING SOON" 
+                                               FontSize="14" 
+                                               FontWeight="Bold" 
+                                               Foreground="#444444" 
+                                               HorizontalAlignment="Center"
+                                               LetterSpacing="3"/>
+                                    <TextBlock Text="The marketplace is currently being optimized." 
+                                               FontSize="12" 
+                                               Foreground="#333333" 
+                                               HorizontalAlignment="Center"/>
+                                </StackPanel>
                             </StackPanel>
                         </StackPanel>
                     </ScrollViewer>
