@@ -1,0 +1,7 @@
+{
+  "Id": "fire-storm",
+  "Name": "Fire Storm",
+  "Type": "Procedural",
+  "Path": "logic.cs",
+  "ThumbnailPath": "thumbnail.png"
+}

@@ -1,0 +1,33 @@
+[
+  {
+    "Id": "zen-clock-default",
+    "Name": "Zen Clock",
+    "Type": "Clock",
+    "ClockImagePath": "samurai.jpg",
+    "ThumbnailPath": "thumbnail.png"
+  },
+  {
+    "Id": "deep-space-default",
+    "Name": "Deep Space",
+    "Type": "Procedural",
+    "ThumbnailPath": "thumbnail.png"
+  },
+  {
+    "Id": "matrix-code-default",
+    "Name": "Matrix Code",
+    "Type": "Procedural",
+    "ThumbnailPath": "thumbnail.png"
+  },
+  {
+    "Id": "neural-swarm-default",
+    "Name": "Neural Swarm",
+    "Type": "Procedural",
+    "ThumbnailPath": "thumbnail.png"
+  },
+  {
+    "Id": "fire-storm",
+    "Name": "Fire Storm",
+    "Type": "Procedural",
+    "ThumbnailPath": "thumbnail.png"
+  }
+]

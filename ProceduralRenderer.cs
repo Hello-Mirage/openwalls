@@ -60,33 +60,19 @@ public class ProceduralRenderer
 
                 var code = File.ReadAllText(scriptPath);
 
-                // Phase 1: Static Security Scan (The "Forbidden Tongue" Scanner)
+                // Phase 1: Static Security Scan
                 if (IsMalicious(code, out string violation))
                 {
                     Dispatcher.UIThread.Post(() => {
                         _securityError = $"SECURITY VIOLATION: {violation}";
-                        _isLoaded = true; // Show error HUD
+                        _isLoaded = true;
                         _canvas.InvalidateVisual();
                     });
                     return;
                 }
 
-                // Phase 2: Fragmented Whitelisting
-                // We only allow specific core assemblies. No System.IO, No System.Net, No Diagnostics.
-                var safeReferences = new[]
-                {
-                    MetadataReference.CreateFromFile(typeof(object).Assembly.Location),         // System.Runtime
-                    MetadataReference.CreateFromFile(typeof(Enumerable).Assembly.Location),     // System.Linq
-                    MetadataReference.CreateFromFile(typeof(DrawingContext).Assembly.Location), // Avalonia.Media
-                    MetadataReference.CreateFromFile(typeof(ProceduralRenderer).Assembly.Location) // openwalls API
-                };
-
-                var options = ScriptOptions.Default
-                    .WithReferences(safeReferences)
-                    .WithImports("System", "System.Linq", "System.Collections.Generic", "Avalonia", "Avalonia.Media", "openwalls");
-
-                var script = CSharpScript.Create(code, options, typeof(WallpaperContext));
-                _scriptRunner = script.CreateDelegate();
+                // Phase 2: Lazy Compilation 
+                _scriptRunner = await RoslynCompiler.Compile(code);
                 
                 Dispatcher.UIThread.Post(() => {
                     _isLoaded = true;
@@ -103,6 +89,28 @@ public class ProceduralRenderer
                 });
             }
         });
+    }
+
+    // Nested class to isolate heavy Roslyn dependencies from MainWindow JIT
+    private static class RoslynCompiler
+    {
+        public static async Task<ScriptRunner<object>> Compile(string code)
+        {
+            var safeReferences = new[]
+            {
+                MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
+                MetadataReference.CreateFromFile(typeof(Enumerable).Assembly.Location),
+                MetadataReference.CreateFromFile(typeof(DrawingContext).Assembly.Location),
+                MetadataReference.CreateFromFile(typeof(ProceduralRenderer).Assembly.Location)
+            };
+
+            var options = ScriptOptions.Default
+                .WithReferences(safeReferences)
+                .WithImports("System", "System.Linq", "System.Collections.Generic", "Avalonia", "Avalonia.Media", "openwalls");
+
+            var script = CSharpScript.Create(code, options, typeof(WallpaperContext));
+            return script.CreateDelegate();
+        }
     }
 
     private bool IsMalicious(string code, out string violation)

@@ -1,0 +1,31 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="openwalls.ClockOverlayWindow"
+        Title="Clock Overlay"
+        SystemDecorations="None"
+        WindowState="Maximized"
+        Background="Transparent"
+        TransparencyLevelHint="Transparent"
+        Topmost="False"
+        ShowInTaskbar="False"
+        IsHitTestVisible="False">
+
+    <Grid x:Name="ClockLayer" IsVisible="True">
+        <StackPanel x:Name="ClockContainer" VerticalAlignment="Center" HorizontalAlignment="Center">
+            <StackPanel.RenderTransform>
+                <TranslateTransform X="0" Y="-150" />
+            </StackPanel.RenderTransform>
+            
+            <TextBlock x:Name="ClockTime" Text="00:00" FontFamily="avares://openwalls/assets/electroharmonix/Electroharmonix.otf#Electroharmonix" FontSize="140" FontWeight="ExtraBold" Foreground="White" LetterSpacing="10" HorizontalAlignment="Center">
+                <TextBlock.Effect>
+                    <DropShadowEffect BlurRadius="30" Opacity="0.8" Color="Black" />
+                </TextBlock.Effect>
+            </TextBlock>
+            <TextBlock x:Name="ClockDate" Text="MONDAY, JANUARY 1" FontSize="28" FontWeight="Light" Foreground="White" LetterSpacing="12" HorizontalAlignment="Center" Margin="0,-20,0,0" Opacity="0.8">
+                <TextBlock.Effect>
+                    <DropShadowEffect BlurRadius="15" Opacity="0.6" Color="Black" />
+                </TextBlock.Effect>
+            </TextBlock>
+        </StackPanel>
+    </Grid>
+</Window>

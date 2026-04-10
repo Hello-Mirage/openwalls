@@ -11,32 +11,23 @@
         WindowState="Maximized"
         Background="Transparent"
         Topmost="False"
-        ShowInTaskbar="False">
+        ShowInTaskbar="False"
+        PointerPressed="OnPointerPressed">
+
+    <Window.ContextMenu>
+        <ContextMenu x:Name="MainContextMenu">
+            <MenuItem Header="Edit Clock Settings" Click="OnEditClockClick" x:Name="EditClockMenuItem"/>
+            <Separator/>
+            <MenuItem Header="Exit" Click="OnExitClick"/>
+        </ContextMenu>
+    </Window.ContextMenu>
     
-    <Grid>
+    <Grid x:Name="RootGrid" Background="Transparent">
         <!-- Layer 0: Solid Color -->
         <Border x:Name="ColorLayer" IsVisible="False" Background="Black"/>
 
         <!-- Layer 1: Solid Background (Fallback) -->
         <Border x:Name="GradientLayer" IsVisible="True" Background="Black"/>
-
-        <!-- Layer 1.5: Zen Clock HUD -->
-        <Grid x:Name="ClockLayer" IsVisible="False">
-            <Image x:Name="ClockBackground" Stretch="UniformToFill" />
-            <Border Background="Black" Opacity="0.2" /> <!-- Subtle darken for HUD readability -->
-            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,0,150">
-                <TextBlock x:Name="ClockTime" Text="00:00" FontFamily="avares://openwalls/assets/electroharmonix/Electroharmonix.otf#Electroharmonix" FontSize="140" FontWeight="ExtraBold" Foreground="White" LetterSpacing="10" HorizontalAlignment="Center">
-                    <TextBlock.Effect>
-                        <DropShadowEffect BlurRadius="30" Opacity="0.8" Color="Black" />
-                    </TextBlock.Effect>
-                </TextBlock>
-                <TextBlock x:Name="ClockDate" Text="MONDAY, JANUARY 1" FontSize="28" FontWeight="Light" Foreground="White" LetterSpacing="12" HorizontalAlignment="Center" Margin="0,-20,0,0" Opacity="0.8">
-                    <TextBlock.Effect>
-                        <DropShadowEffect BlurRadius="15" Opacity="0.6" Color="Black" />
-                    </TextBlock.Effect>
-                </TextBlock>
-            </StackPanel>
-        </Grid>
 
         <!-- Layer 2: Image -->
         <Image x:Name="ImageLayer" Stretch="UniformToFill" IsVisible="False" Opacity="0"/>
@@ -47,6 +38,12 @@
         <!-- Layer 4: Procedural C# Animations -->
         <local:ProceduralCanvas x:Name="ProceduralLayer" IsVisible="False"/>
 
+        <!-- Layer 5: Zen Clock Background (The image/video backup for the clock) -->
+        <Grid x:Name="ClockBackdropLayer" IsVisible="False">
+            <Image x:Name="ClockBackground" Stretch="UniformToFill" />
+            <Border Background="Black" Opacity="0.2" /> 
+        </Grid>
+
         <!-- Centered Label (Only if no content) -->
         <StackPanel x:Name="FallbackText" VerticalAlignment="Center" HorizontalAlignment="Center" Opacity="0.5" IsVisible="True">
             <TextBlock Text="OPENWALLS" FontSize="72" FontWeight="ExtraBold" Foreground="White" LetterSpacing="10" HorizontalAlignment="Center">
@@ -55,5 +52,41 @@
                 </TextBlock.Effect>
             </TextBlock>
         </StackPanel>
+
+        <!-- Layer 7: Optimization Progress HUD (Bottom) -->
+        <Border x:Name="OptimizationStatusHUD" 
+                VerticalAlignment="Bottom" 
+                HorizontalAlignment="Stretch" 
+                Height="60" 
+                Background="#AA000000" 
+                IsVisible="False">
+            <Grid ColumnDefinitions="Auto, *, Auto" Margin="30, 0">
+                <TextBlock x:Name="OptimizationStatusText" 
+                           VerticalAlignment="Center" 
+                           Foreground="White" 
+                           FontSize="14" 
+                           FontWeight="Medium"
+                           Text="Optimizing Video for GPU Acceleration..."/>
+                
+                <ProgressBar x:Name="OptimizationProgressBar" 
+                             Grid.Column="1" 
+                             Margin="20, 0" 
+                             Height="4" 
+                             Minimum="0" 
+                             Maximum="100" 
+                             Value="0"
+                             Foreground="#00ccff"
+                             Background="#44ffffff"/>
+
+                <TextBlock x:Name="OptimizationProgressPercent" 
+                           Grid.Column="2" 
+                           VerticalAlignment="Center" 
+                           Foreground="White" 
+                           FontSize="14" 
+                           Width="50"
+                           TextAlignment="Right"
+                           Text="0%"/>
+            </Grid>
+        </Border>
     </Grid>
 </Window>

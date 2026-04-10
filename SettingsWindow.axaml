@@ -102,7 +102,7 @@
                                         <Button.ContextMenu>
                                             <ContextMenu>
                                                 <MenuItem Header="Set Thumbnail..." Click="SetThumbnail_Click" FontWeight="SemiBold"/>
-                                                <MenuItem Header="Change Image" Click="ChangeClockImage_Click" IsVisible="{Binding Type, Converter={x:Static local:TypeToVisibilityConverter.Instance}, ConverterParameter=Clock}" />
+                                                <MenuItem Header="Edit Clock Settings" Click="EditClockSettings_Click" IsVisible="{Binding Type, Converter={x:Static local:TypeToVisibilityConverter.Instance}, ConverterParameter=Clock}" />
                                                 <Separator Background="#11ffffff"/>
                                                 <MenuItem Header="Delete Preset" Click="DeletePreset_Click" Foreground="#ff5555"/>
                                             </ContextMenu>

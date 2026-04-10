@@ -4,21 +4,43 @@ Welcome to the Openwalls Community! This guide will teach you how to create "Plu
 
 ## The Modular Structure
 
-Openwalls uses a Modular Folder System. This means every wallpaper is a single folder. To share it, you just zip the folder. To install it, the user just drops the folder into their library.
+Openwalls uses a Modular Folder System. This means every wallpaper is a single folder. 
 
 ### Your Wallpaper Folder
 ```text
 /MyCoolWallpaper/
-├── wallpaper.json        # The heart of your wallpaper (metadata)
+├── logic.cs              # Your C# script (for Procedural types)
 ├── backdrop.mp4          # Your video or image file
-└── thumbnail.jpg         # The icon shown in the dashboard
+└── thumbnail.png         # The icon shown in the dashboard
 ```
 
 ---
 
-## The wallpaper.json Schema
+## 🚀 The AI/MCP Workflow (True Plug-and-Play)
 
-This file tells the engine what your wallpaper is and how to play it.
+If you are an AI agent (MCP) or a developer adding a new wallpaper to the build, follow these rules to ensure zero code-base interference:
+
+1.  **Create the Folder**: Add your wallpaper folder to `wallpapers/`.
+2.  **Add Logic**: For procedural wallpapers, create your `logic.cs` inside that folder.
+3.  **Register the Asset**: Add a single entry to `wallpapers/registry.json`.
+    -   **DO NOT EDIT `SettingsWindow.axaml.cs`**. The application will automatically bootstrap and "heal" your folder metadata based on this registry entry.
+    -   The `Id` in the registry should be unique and lowercase-kebab-case.
+
+### Example Registry Entry:
+```json
+{
+  "Id": "my-cool-wallpaper",
+  "Name": "My Cool Wallpaper",
+  "Type": "Procedural",
+  "ThumbnailPath": "thumbnail.png"
+}
+```
+
+---
+
+## The wallpaper.json Schema (Local Metadata)
+
+While the registry handles the initial bootstrap, each folder also contains a `wallpaper.json` which persists local settings.
 
 ```json
 {
@@ -26,7 +48,7 @@ This file tells the engine what your wallpaper is and how to play it.
   "Name": "Neon Nights",
   "Type": "Video",
   "Path": "backdrop.mp4",
-  "ThumbnailPath": "thumbnail.jpg",
+  "ThumbnailPath": "thumbnail.png",
   "IsMuted": true
 }
 ```
@@ -43,7 +65,7 @@ This file tells the engine what your wallpaper is and how to play it.
 
 ## Scripting Guide (Advanced)
 
-If you set your type to Procedural, the engine will look for a logic.cs file in your folder. This is where you can write custom C# code to draw anything!
+If you set your type to Procedural, the engine will look for a logic.cs file in your folder. 
 
 ### The logic.cs Template
 Your script has access to a WallpaperContext object (implicit globals). 
@@ -53,12 +75,8 @@ Your script has access to a WallpaperContext object (implicit globals).
 dc.FillRectangle(Brushes.Black, new Rect(Bounds));
 
 // Use State to store variables between frames
-int count;
-if (!State.ContainsKey("myCount")) {
-    count = 0;
-} else {
-    count = (int)State["myCount"];
-}
+if (!State.ContainsKey("myCount")) State["myCount"] = 0;
+int count = (int)State["myCount"];
 
 DrawText("Hello Modular World!", new Point(100, 100), 40, Brushes.White);
 State["myCount"] = count + 1;
@@ -68,44 +86,29 @@ State["myCount"] = count + 1;
 - dc: The Avalonia DrawingContext.
 - Bounds: The Size of the screen.
 - Time: A TimeSpan of how long the wallpaper has been running.
-- DeltaTime: Time since the last frame (useful for physics).
-- State: A Dictionary<string, object> to persist variables between frames.
-- Rng: A Random instance for variety.
-- DrawText(string, Point, double, IBrush): A helper for fast text rendering.
+- DeltaTime: Time since the last frame.
+- State: A Dictionary<string, object> to persist variables.
+- Rng: A Random instance.
+- DrawText(string, Point, double, IBrush): A helper for text.
 
 ---
 
 ## Security and Sandboxing
 
-To ensure the safety of our community, Openwalls runs all procedural scripts in a **Hardened Sandbox**.
+Openwalls runs all procedural scripts in a **Hardened Sandbox**.
 
-### Pre-Execution Scanning
-Before your script is compiled, the engine scans the code for "Forbidden Tokens." If your script attempted to access any of the following, it will be blocked:
+### Forbidden Tokens:
 - **Files & OS**: `System.IO`, `File`, `Directory`, `Process`.
 - **Network**: `System.Net`, `HttpClient`, `Socket`.
-- **Stealth**: `System.Reflection`, `GetType`, `DllImport`.
-
-### Assembly Whitelisting
-The engine only loads a limited set of drawing and math libraries. Even if you don't use the forbidden keywords, trying to use an unlisted assembly will result in a compilation error.
-
-**If your wallpaper is blocked:** Check your `logic.cs` for any forbidden tokens and ensure you are only using the provided `WallpaperContext` API for your animations.
+- **Reflection**: `System.Reflection`, `GetType`, `typeof`, `Assembly`.
+- **Unsafe**: `DllImport`, `unsafe`, `fixed`.
 
 ---
 
-## Best Practices for Creators
-
-1. Resolution: Design for 1920x1080 or 3840x2160.
-2. Video Looping: Ensure your video has a seamless loop. Avoid abrupt cuts.
-3. File Size: Keep video backgrounds under 100MB for smooth performance on all systems.
-4. Thumbnail: Always provide a thumbnail.jpg (approx 400px wide) so your wallpaper looks premium in the dashboard.
-5. No Absolute Paths: Never use C:\Users\... in your wallpaper.json. Always use just the filename. The engine handles the rest!
-
----
-
-## Sharing Your Work
-
-1. Right-click your wallpaper folder.
-2. Select Compress to ZIP file.
-3. Share the ZIP on the OWMarketplace!
+## Best Practices
+1. **No Internal Changes**: Never modify `SettingsWindow.axaml.cs` to add presets. Use `registry.json`.
+2. **File Size**: Keep video backgrounds under 100MB.
+3. **Thumbnails**: Always provide a `thumbnail.png` (400px wide).
+4. **No Absolute Paths**: The engine handles relocation automatically.
 
 Happy Creating!

@@ -91,12 +91,10 @@ public partial class SettingsWindow : Window
             }
         }
 
-        // 4. Handle Migration/Default injection if library is empty
-        if (allPresets.Count == 0)
+        // 4. Sync Registry (Bootstrap missing stock wallpapers)
+        if (SyncRegistryWithLibrary(allPresets))
         {
-            InitializeDefaultFolders();
-            // Re-scan after initializing defaults
-            LoadLibrary(); 
+            LoadLibrary(); // Re-scan if something was added
             return;
         }
 
@@ -108,43 +106,70 @@ public partial class SettingsWindow : Window
         LibraryItemsControl.ItemsSource = _library;
     }
 
-    private void InitializeDefaultFolders()
+    private bool SyncRegistryWithLibrary(List<WallpaperPreset> existing)
     {
-        var defaults = new List<WallpaperPreset>
+        bool added = false;
+        try
         {
-            new WallpaperPreset { Id = "zen-clock-default", Name = "Zen Clock", Type = WallpaperType.Clock, ClockImagePath = "samurai.jpg", ThumbnailPath = "thumbnail.png" },
-            new WallpaperPreset { Id = "deep-space-default", Name = "Deep Space", Type = WallpaperType.Procedural, ProceduralId = "starfield", ThumbnailPath = "thumbnail.png" },
-            new WallpaperPreset { Id = "matrix-code-default", Name = "Matrix Code", Type = WallpaperType.Procedural, ProceduralId = "matrix", ThumbnailPath = "thumbnail.png" },
-            new WallpaperPreset { Id = "neural-swarm-default", Name = "Neural Swarm", Type = WallpaperType.Procedural, ProceduralId = "swarm", ThumbnailPath = "thumbnail.png" }
-        };
-
-        foreach (var d in defaults)
-        {
-            var folder = Path.Combine(WallpaperConfig.LibraryDir, d.Name.Replace(" ", ""));
-            if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
+            var registryPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "wallpapers/registry.json");
+            System.Diagnostics.Debug.WriteLine($"[OW] Syncing registry from: {registryPath}");
             
-            d.BaseDirectory = folder;
-            
-            // Move asset if it exists in root
-            if (d.Type == WallpaperType.Clock)
+            if (!File.Exists(registryPath)) 
             {
-                var src = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "assets/samurai-warrior-observing-village-moonlight.jpg");
-                if (File.Exists(src)) File.Copy(src, Path.Combine(folder, "samurai.jpg"), true);
-
-                var thumbSrc = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "assets/samurai-warrior-observing-village-moonlight.jpg"); // Fallback
-                var currentThumbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $"wallpapers/{d.Name.Replace(" ", "")}/thumbnail.png");
-                
-                if (File.Exists(currentThumbPath))
-                {
-                    thumbSrc = currentThumbPath;
-                }
-                
-                var thumbDest = Path.Combine(folder, "thumbnail.png");
-                if (File.Exists(thumbSrc)) File.Copy(thumbSrc, thumbDest, true);
+                System.Diagnostics.Debug.WriteLine("[OW] Registry file NOT FOUND.");
+                return false;
             }
 
-            File.WriteAllText(Path.Combine(folder, "wallpaper.json"), JsonConvert.SerializeObject(d, Formatting.Indented));
+            string json = File.ReadAllText(registryPath);
+            var stock = JsonConvert.DeserializeObject<List<WallpaperPreset>>(json);
+            if (stock == null) return false;
+
+            foreach (var d in stock)
+            {
+                // check if ID or Name already exists in any case
+                bool exists = existing.Any(p => 
+                    p.Id.Equals(d.Id, StringComparison.OrdinalIgnoreCase) || 
+                    p.Name.Equals(d.Name, StringComparison.OrdinalIgnoreCase));
+
+                if (exists) continue;
+
+                var sanitizedName = d.Name.Replace(" ", "");
+                var folder = Path.Combine(WallpaperConfig.LibraryDir, sanitizedName);
+                if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
+                
+                d.BaseDirectory = folder;
+                System.Diagnostics.Debug.WriteLine($"[OW] Bootstrapping missing preset: {d.Name} at {folder}");
+                
+                // Copy assets if they exist in build output root
+                if (d.Type == WallpaperType.Clock)
+                {
+                    var src = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "assets/samurai-warrior-observing-village-moonlight.jpg");
+                    if (File.Exists(src)) File.Copy(src, Path.Combine(folder, "samurai.jpg"), true);
+
+                    var currentThumbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $"wallpapers/{sanitizedName}/thumbnail.png");
+                    var thumbDest = Path.Combine(folder, "thumbnail.png");
+                    
+                    if (File.Exists(currentThumbPath)) File.Copy(currentThumbPath, thumbDest, true);
+                    else if (File.Exists(src)) File.Copy(src, thumbDest, true);
+                }
+                else if (d.Type == WallpaperType.Procedural)
+                {
+                    var srcLogic = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $"wallpapers/{sanitizedName}/logic.cs");
+                    if (File.Exists(srcLogic)) File.Copy(srcLogic, Path.Combine(folder, "logic.cs"), true);
+                    
+                    var srcThumb = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $"wallpapers/{sanitizedName}/thumbnail.png");
+                    if (File.Exists(srcThumb)) File.Copy(srcThumb, Path.Combine(folder, "thumbnail.png"), true);
+                }
+
+                File.WriteAllText(Path.Combine(folder, "wallpaper.json"), JsonConvert.SerializeObject(d, Formatting.Indented));
+                added = true;
+            }
         }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[OW] Registry Sync Error: {ex.Message}");
+        }
+        return added;
     }
 
     private void AddColor_Click(object? sender, RoutedEventArgs e)
@@ -202,31 +227,14 @@ public partial class SettingsWindow : Window
         }
     }
 
-    private async void ChangeClockImage_Click(object? sender, RoutedEventArgs e)
+    private void EditClockSettings_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is MenuItem item && item.DataContext is WallpaperPreset preset && preset.Type == WallpaperType.Clock)
         {
-            var topLevel = GetTopLevel(this);
-            if (topLevel == null) return;
-
-            var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
-            {
-                Title = $"Choose Backdrop for {preset.Name}",
-                FileTypeFilter = new[] { FilePickerFileTypes.ImageAll }
-            });
-
-            if (files.Any())
-            {
-                var src = files.First().Path.LocalPath;
-                var ext = Path.GetExtension(src);
-                var dest = Path.Combine(preset.BaseDirectory!, "custom_bg" + ext);
-                File.Copy(src, dest, true);
-                
-                preset.ClockImagePath = "custom_bg" + ext;
-                File.WriteAllText(Path.Combine(preset.BaseDirectory!, "wallpaper.json"), JsonConvert.SerializeObject(preset, Formatting.Indented));
-                
-                WallpaperChanged?.Invoke(_config);
-            }
+            var editWin = new ClockEditWindow(preset);
+            editWin.PreviewChanged += (p) => WallpaperChanged?.Invoke(_config); // Live preview if this is the active wallpaper
+            editWin.Saved += () => LoadLibrary(); // Refresh library view
+            editWin.Show();
         }
     }
 
@@ -271,6 +279,12 @@ public partial class SettingsWindow : Window
         }
     }
 
+    protected override void OnClosing(WindowClosingEventArgs e)
+    {
+        ThumbnailConverter.ClearAllCache();
+        base.OnClosing(e);
+    }
+
     private void DragStrip_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) this.BeginMoveDrag(e);
@@ -302,6 +316,12 @@ public class ThumbnailConverter : IMultiValueConverter
     private static HashSet<string> _loading = new();
 
     public static void ClearCache(string path) => _cache.Remove(path);
+    public static void ClearAllCache() 
+    {
+        foreach (var bmp in _cache.Values) bmp.Dispose();
+        _cache.Clear();
+        _loading.Clear();
+    }
 
     public object? Convert(IList<object?> values, Type targetType, object? parameter, CultureInfo culture)
     {

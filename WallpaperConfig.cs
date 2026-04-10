@@ -46,7 +46,16 @@ public class WallpaperPreset : INotifyPropertyChanged
     }
 
     public string? ProceduralId { get; set; } // ID for C# animation engine
-    public string? ClockImagePath { get; set; } // Custom backdrop for Clock type
+    public string? ClockImagePath { get; set; } // Legacy - Custom backdrop for Clock type
+    
+    // Advanced Clock Customization
+    public string? ClockBackdropPath { get; set; } 
+    public string? ClockBackdropType { get; set; } // "Image" or "Video"
+    public double ClockFontSize { get; set; } = 140;
+    public string ClockFontColor { get; set; } = "#FFFFFF";
+    public double ClockVerticalOffset { get; set; } = -150;
+    public double ClockHorizontalOffset { get; set; } = 0;
+
     public string? BaseDirectory { get; set; } // Local folder path for modular wallpapers
     public WallpaperType Type { get; set; }
     public bool IsMuted { get; set; } = true;

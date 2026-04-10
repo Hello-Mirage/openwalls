@@ -11,6 +11,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Threading;
 using System.Runtime.InteropServices;
+using System.Diagnostics;
 using LibVLCSharp.Shared;
 
 namespace openwalls;
@@ -38,11 +39,14 @@ public partial class MainWindow : Window
     private Task? _optimizationTask;
     
     // Zen Clock Timer
-    private DispatcherTimer? _clockTimer;
+
     
     private int _screenWidth;
     private int _screenHeight;
     private ProceduralRenderer? _proceduralRenderer;
+    private ClockOverlayWindow? _clockHUD;
+    private Bitmap? _backgroundBitmap;
+    private Bitmap? _clockBackgroundBitmap;
 
     public MainWindow()
     {
@@ -80,27 +84,76 @@ public partial class MainWindow : Window
         ProceduralLayer.Renderer = _proceduralRenderer;
 
         Core.Initialize();
-        _libVLC = new LibVLC();
+        _libVLC = new LibVLC(
+            "--file-caching=500", 
+            "--quiet", 
+            "--no-video-title-show"
+        );
         _mediaPlayer = new MediaPlayer(_libVLC);
         VideoLayer.MediaPlayer = _mediaPlayer;
 
-        // Zen Clock Timer (1s updates)
-        _clockTimer = new DispatcherTimer(TimeSpan.FromSeconds(1), DispatcherPriority.Background, UpdateClock);
-        _clockTimer.Start();
+        // Initialize HUD Overlay
+        _clockHUD = new ClockOverlayWindow();
+        
+        var hudHandle = TryGetPlatformHandle();
+        if (hudHandle != null) _clockHUD.SetParentHandle(hudHandle.Handle);
+        
+        _clockHUD.Show();
 
+        // 1. Subscribe to Optimization Progress
+        VideoOptimizer.OptimizationStarted += path => Dispatcher.UIThread.Post(() => {
+            if (OptimizationStatusHUD != null) OptimizationStatusHUD.IsVisible = true;
+            if (OptimizationProgressBar != null) OptimizationProgressBar.Value = 0;
+            if (OptimizationProgressPercent != null) OptimizationProgressPercent.Text = "0%";
+        });
+
+        VideoOptimizer.ProgressUpdated += (path, percent) => Dispatcher.UIThread.Post(() => {
+            if (OptimizationProgressBar != null) OptimizationProgressBar.Value = percent;
+            if (OptimizationProgressPercent != null) OptimizationProgressPercent.Text = $"{(int)percent}%";
+        });
+
+        VideoOptimizer.OptimizationFinished += (path, success) => Dispatcher.UIThread.Post(() => {
+            if (OptimizationStatusHUD != null) OptimizationStatusHUD.IsVisible = false;
+            // Refresh if the current video was just optimized
+            if (success && _config.CurrentPresetId != null)
+            {
+                var preset = _config.Library.FirstOrDefault(p => p.Id == _config.CurrentPresetId);
+                var currentPath = preset?.GetResourcePath(preset.Path);
+                if (currentPath == path) OnWallpaperChanged(_config);
+            }
+        });
+
+        // 2. Start Services
         StartBackgroundOptimization();
         LoadConfig();
     }
 
-    private void UpdateClock(object? sender, EventArgs e)
+    private void OnPointerPressed(object? sender, Avalonia.Input.PointerPressedEventArgs e)
     {
-        if (ClockLayer.IsVisible)
+        if (e.GetCurrentPoint(this).Properties.IsRightButtonPressed)
         {
-            var now = DateTime.Now;
-            ClockTime.Text = now.ToString("h:mm");
-            ClockDate.Text = now.ToString("dddd, MMMM dd").ToUpper();
+            // Only show edit menu if clock is active
+            var preset = _config.Library.FirstOrDefault(p => p.Id == _config.CurrentPresetId);
+            EditClockMenuItem.IsVisible = (preset?.Type == WallpaperType.Clock);
+            MainContextMenu.Open(this);
         }
     }
+
+    private void OnEditClockClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        var preset = _config.Library.FirstOrDefault(p => p.Id == _config.CurrentPresetId);
+        if (preset != null && preset.Type == WallpaperType.Clock)
+        {
+            var editWin = new ClockEditWindow(preset);
+            editWin.PreviewChanged += (p) => OnWallpaperChanged(_config); // Live preview by refreshing config/preset
+            editWin.Saved += () => LoadConfig(); // Persistence
+            editWin.Show();
+        }
+    }
+
+    private void OnExitClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => Close();
+
+
 
     private void StartBackgroundOptimization()
     {
@@ -179,24 +232,31 @@ public partial class MainWindow : Window
 
     private void PausePlayback(string info)
     {
-        if (_mediaPlayer?.IsPlaying == true) _mediaPlayer.Pause();
+        // Aggressive: Stop entirely to release video buffers and Roslyn memory
+        if (_mediaPlayer?.IsPlaying == true) _mediaPlayer.Stop();
         _proceduralRenderer?.Stop(); 
+        
+        _backgroundBitmap?.Dispose();
+        _backgroundBitmap = null;
+        ImageLayer.Source = null;
+
+        _clockBackgroundBitmap?.Dispose();
+        _clockBackgroundBitmap = null;
+        ClockBackground.Source = null;
+
         _isOptimizationPaused = true;
+        
+        // Immediate clean up
+        GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, true);
     }
 
-    private void ResumePlayback()
+    private async void ResumePlayback()
     {
         _isOptimizationPaused = false;
-        if (_mediaPlayer != null && _mediaPlayer.Media != null) _mediaPlayer.Play();
-        
-        if (_config.CurrentPresetId != null)
-        {
-            var preset = _config.Library.FirstOrDefault(p => p.Id == _config.CurrentPresetId);
-            if (preset?.Type == WallpaperType.Procedural)
-            {
-                _proceduralRenderer?.Start(preset);
-            }
-        }
+        // Wait a small moment for Windows to finish redrawing before we hammer the GPU
+        await Task.Delay(100);
+        // Reload everything from config
+        OnWallpaperChanged(_config);
     }
 
     private void LoadConfig()
@@ -215,7 +275,7 @@ public partial class MainWindow : Window
         else
         {
             _config = new WallpaperConfig();
-            _config.CurrentPresetId = _config.Library.First().Id;
+            if (_config.Library.Any()) _config.CurrentPresetId = _config.Library.First().Id;
             OnWallpaperChanged(_config);
         }
     }
@@ -225,74 +285,160 @@ public partial class MainWindow : Window
         _config = config;
         var preset = config.Library.FirstOrDefault(p => p.Id == config.CurrentPresetId);
         
+        if (_libVLC == null || _mediaPlayer == null) return;
+
         ColorLayer.IsVisible = false;
         ImageLayer.IsVisible = false;
         VideoLayer.IsVisible = false;
         ProceduralLayer.IsVisible = false;
-        ClockLayer.IsVisible = false;
+        ClockBackdropLayer.IsVisible = false;
         FallbackText.IsVisible = false;
         ImageLayer.Opacity = 0;
         VideoLayer.Opacity = 0;
         
-        if (_mediaPlayer?.IsPlaying == true) _mediaPlayer.Stop();
+        if (_mediaPlayer != null && (_mediaPlayer.IsPlaying || _mediaPlayer.State == VLCState.Paused)) 
+        {
+            _mediaPlayer.Stop();
+        }
         _proceduralRenderer?.Stop();
         _isOptimizationPaused = false;
+
+        // Dispose old bitmaps to free RAM
+        _backgroundBitmap?.Dispose();
+        _backgroundBitmap = null;
+        ImageLayer.Source = null;
+
+        _clockBackgroundBitmap?.Dispose();
+        _clockBackgroundBitmap = null;
+        ClockBackground.Source = null;
+
+        // Update HUD
+        _clockHUD?.UpdateConfiguration(config);
 
         if (preset == null) { FallbackText.IsVisible = true; return; }
 
         switch (preset.Type)
         {
             case WallpaperType.Color:
-                if (!string.IsNullOrEmpty(preset.Color)) { ColorLayer.Background = SolidColorBrush.Parse(preset.Color); ColorLayer.IsVisible = true; }
-                break;
+                {
+                    if (!string.IsNullOrEmpty(preset.Color)) { ColorLayer.Background = SolidColorBrush.Parse(preset.Color); ColorLayer.IsVisible = true; }
+                    break;
+                }
             case WallpaperType.Image:
-                var imgPath = preset.GetResourcePath(preset.Path);
-                if (!string.IsNullOrEmpty(imgPath) && File.Exists(imgPath)) { ImageLayer.Source = new Bitmap(imgPath); ImageLayer.IsVisible = true; ImageLayer.Opacity = 1; }
-                break;
+                {
+                    var imgPath = preset.GetResourcePath(preset.Path);
+                    if (!string.IsNullOrEmpty(imgPath) && File.Exists(imgPath)) 
+                    { 
+                        _backgroundBitmap = new Bitmap(imgPath);
+                        ImageLayer.Source = _backgroundBitmap;
+                        ImageLayer.IsVisible = true; 
+                        ImageLayer.Opacity = 1; 
+                    }
+                    break;
+                }
             case WallpaperType.Video:
-                var videoPath = preset.GetResourcePath(preset.Path);
-                if (!string.IsNullOrEmpty(videoPath) && File.Exists(videoPath))
                 {
-                    using var media = new Media(_libVLC!, videoPath, FromType.FromPath);
-                    media.AddOption(":input-repeat=65535");
-                    if (preset.IsMuted) _mediaPlayer!.Mute = true;
-                    VideoLayer.IsVisible = true;
-                    VideoLayer.Opacity = 1;
-                    _mediaPlayer!.Play(media);
+                    var videoPath = preset.GetResourcePath(preset.Path);
+                    if (!string.IsNullOrEmpty(videoPath) && File.Exists(videoPath))
+                    {
+                        // Check for optimized version
+                        var (optimizedPath, isOptimized) = VideoOptimizer.GetOptimizedPath(videoPath);
+                        var pathToPlay = isOptimized ? optimizedPath : videoPath;
+
+                        try 
+                        {
+                            using var media = new Media(_libVLC!, pathToPlay, FromType.FromPath);
+                            media.AddOption(":input-repeat=65535");
+                            if (preset.IsMuted) _mediaPlayer!.Mute = true;
+                            VideoLayer.IsVisible = true;
+                            VideoLayer.Opacity = 1;
+                            _mediaPlayer!.Play(media);
+                        }
+                        catch (Exception ex)
+                        {
+                            // FALLBACK: If optimized file fails (locked or corrupted), play source
+                            Debug.WriteLine($"Playback failed for {pathToPlay}: {ex.Message}. Falling back to source.");
+                            using var sourceMedia = new Media(_libVLC!, videoPath, FromType.FromPath);
+                            sourceMedia.AddOption(":input-repeat=65535");
+                            VideoLayer.IsVisible = true;
+                            VideoLayer.Opacity = 1;
+                            _mediaPlayer!.Play(sourceMedia);
+                        }
+
+                        // If not optimized, start optimization in background for next time
+                        if (!isOptimized) VideoOptimizer.OptimizeAsync(videoPath);
+                    }
+                    break;
                 }
-                break;
             case WallpaperType.Procedural:
-                ProceduralLayer.IsVisible = true; 
-                _proceduralRenderer?.Start(preset); 
-                break;
+                {
+                    ProceduralLayer.IsVisible = true; 
+                    _proceduralRenderer?.Start(preset); 
+                    break;
+                }
             case WallpaperType.Clock:
-                var relativeClockPath = preset.ClockImagePath ?? "assets/samurai-warrior-observing-village-moonlight.jpg";
-                var clockPath = preset.GetResourcePath(relativeClockPath);
-                
-                if (File.Exists(clockPath)) 
                 {
-                    ClockBackground.Source = new Bitmap(clockPath);
-                }
-                else 
-                {
-                    // Fallback to absolute check or assets folder
-                    var fallbackPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, relativeClockPath);
-                    if (File.Exists(fallbackPath)) 
+                    ClockBackground.IsVisible = false;
+                    
+                    // 1. Handle Backdrop (Image or Video)
+                    if (preset.ClockBackdropType == "Video" && !string.IsNullOrEmpty(preset.ClockBackdropPath))
                     {
-                        ClockBackground.Source = new Bitmap(fallbackPath);
+                        var videoPath = preset.GetResourcePath(preset.ClockBackdropPath);
+                        if (File.Exists(videoPath))
+                        {
+                            var (optimizedPath, isOptimized) = VideoOptimizer.GetOptimizedPath(videoPath);
+                            var pathToPlay = isOptimized ? optimizedPath : videoPath;
+
+                            try 
+                            {
+                                using var media = new Media(_libVLC!, pathToPlay, FromType.FromPath);
+                                media.AddOption(":input-repeat=65535");
+                                _mediaPlayer!.Mute = true;
+                                VideoLayer.IsVisible = true;
+                                VideoLayer.Opacity = 1;
+                                _mediaPlayer!.Play(media);
+                            }
+                            catch (Exception ex)
+                            {
+                                Debug.WriteLine($"Clock backdrop failed for {pathToPlay}: {ex.Message}. Falling back to source.");
+                                using var sourceMedia = new Media(_libVLC!, videoPath, FromType.FromPath);
+                                sourceMedia.AddOption(":input-repeat=65535");
+                                VideoLayer.IsVisible = true;
+                                VideoLayer.Opacity = 1;
+                                _mediaPlayer!.Play(sourceMedia);
+                            }
+
+                            if (!isOptimized) VideoOptimizer.OptimizeAsync(videoPath);
+                        }
                     }
-                    else if (File.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "assets/samurai-warrior-observing-village-moonlight.jpg")))
+                    else
                     {
-                        ClockBackground.Source = new Bitmap(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "assets/samurai-warrior-observing-village-moonlight.jpg"));
+                        var relativeClockPath = preset.ClockBackdropPath ?? preset.ClockImagePath ?? "assets/samurai-warrior-observing-village-moonlight.jpg";
+                        var clockPath = preset.GetResourcePath(relativeClockPath);
+                        
+                        if (File.Exists(clockPath)) 
+                        {
+                            _clockBackgroundBitmap = new Bitmap(clockPath);
+                            ClockBackground.Source = _clockBackgroundBitmap;
+                            ClockBackground.IsVisible = true;
+                        }
                     }
+
+                    // 2. Enable Backdrop Layer (Background image for clock)
+                    ClockBackdropLayer.IsVisible = true;
+                    break;
                 }
-                ClockLayer.IsVisible = true;
-                UpdateClock(null, EventArgs.Empty);
-                break;
             default:
-                FallbackText.IsVisible = true;
-                break;
+                {
+                    FallbackText.IsVisible = true;
+                    break;
+                }
         }
+
+        // Force a collection to clean up unmanaged bitmap memory immediately
+        Dispatcher.UIThread.Post(() => {
+            GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, true);
+        }, DispatcherPriority.Background);
     }
 
     private void ApplyAdvancedStyles(IntPtr hwnd)
@@ -314,11 +460,12 @@ public partial class MainWindow : Window
 
     protected override void OnClosing(WindowClosingEventArgs e)
     {
+        VideoOptimizer.CancelAll();
         _optimizationCts?.Cancel();
         _proceduralRenderer?.Stop();
-        _clockTimer?.Stop();
         _mediaPlayer?.Dispose();
         _libVLC?.Dispose();
+        _clockHUD?.Close();
         base.OnClosing(e);
     }
 }
