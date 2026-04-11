@@ -5,6 +5,13 @@
     <Nullable>enable</Nullable>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    
+    <Version>1.0.0-alpha1</Version>
+    <Authors>Hello-Mirage</Authors>
+    <Company>Hello-Mirage Community</Company>
+    <Product>Openwalls</Product>
+    <Description>Modular, high-performance wallpaper engine for Windows.</Description>
+    <Copyright>Copyright © 2026 Hello-Mirage</Copyright>
   </PropertyGroup>
 
   <ItemGroup>
@@ -32,6 +39,7 @@
 
   <ItemGroup>
     <Compile Remove="wallpapers\**\*.cs" />
+    <Compile Remove="publish\**" />
     <None Include="wallpapers\**\*.cs" />
     <None Update="assets\**" CopyToOutputDirectory="PreserveNewest" />
     <None Update="wallpapers\**" CopyToOutputDirectory="PreserveNewest" />

@@ -29,8 +29,13 @@
             <!-- Sidebar -->
             <Border Grid.Column="0" Background="#f2121212" BorderBrush="#11ffffff" BorderThickness="0,0,1,0">
                 <Grid RowDefinitions="Auto, *, Auto">
-                    <StackPanel Grid.Row="0" Margin="30,20,30,30" Spacing="4">
-                        <TextBlock Text="OPENWALLS" FontSize="20" FontWeight="Black" Foreground="#E0E0E0" LetterSpacing="3"/>
+                    <StackPanel Grid.Row="0" Margin="30,20,30,20" Spacing="10" Orientation="Horizontal">
+                        <Image Width="32" Height="32" VerticalAlignment="Center">
+                            <Image.Source>
+                                <SvgImage Source="avares://openwalls/assets/openwalls_logo.svg" />
+                            </Image.Source>
+                        </Image>
+                        <TextBlock Text="OPENWALLS" FontSize="20" FontWeight="Black" Foreground="#E0E0E0" LetterSpacing="3" VerticalAlignment="Center"/>
                     </StackPanel>
 
                     <StackPanel Grid.Row="1" Margin="15,0" Spacing="5">

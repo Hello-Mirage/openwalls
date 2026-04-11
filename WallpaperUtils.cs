@@ -8,7 +8,7 @@ public static class WallpaperUtils
 {
     public static void SendWorkerWMessage()
     {
-        IntPtr progman = Win32Api.FindWindow("Progman", null);
+        IntPtr progman = Win32Api.FindWindow("Progman", string.Empty);
         IntPtr result = IntPtr.Zero;
         
         // Split the desktop layers
@@ -17,11 +17,11 @@ public static class WallpaperUtils
 
     public static IntPtr GetWorkerWHandle()
     {
-        IntPtr progman = Win32Api.FindWindow("Progman", null);
+        IntPtr progman = Win32Api.FindWindow("Progman", string.Empty);
         IntPtr workerw = IntPtr.Zero;
 
         // Strategy 1: Search for WorkerW child of Progman (Windows 11 25H2 / Build 26xxx)
-        workerw = Win32Api.FindWindowEx(progman, IntPtr.Zero, "WorkerW", null);
+        workerw = Win32Api.FindWindowEx(progman, IntPtr.Zero, "WorkerW", string.Empty);
         
         if (workerw != IntPtr.Zero)
         {
@@ -32,10 +32,10 @@ public static class WallpaperUtils
         // Strategy 2: Search for WorkerW sibling of icons (Legacy / Windows 10 / Windows 11 22H2)
         Win32Api.EnumWindows((hwnd, lParam) =>
         {
-            IntPtr shellDll = Win32Api.FindWindowEx(hwnd, IntPtr.Zero, "SHELLDLL_DefView", null);
+            IntPtr shellDll = Win32Api.FindWindowEx(hwnd, IntPtr.Zero, "SHELLDLL_DefView", string.Empty);
             if (shellDll != IntPtr.Zero)
             {
-                workerw = Win32Api.FindWindowEx(IntPtr.Zero, hwnd, "WorkerW", null);
+                workerw = Win32Api.FindWindowEx(IntPtr.Zero, hwnd, "WorkerW", string.Empty);
             }
             return true;
         }, IntPtr.Zero);
@@ -47,7 +47,7 @@ public static class WallpaperUtils
         }
 
         // Strategy 3: Find any empty WorkerW sibling of Progman
-        workerw = Win32Api.FindWindowEx(IntPtr.Zero, progman, "WorkerW", null);
+        workerw = Win32Api.FindWindowEx(IntPtr.Zero, progman, "WorkerW", string.Empty);
         
         return workerw;
     }

@@ -51,6 +51,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        Icon = IconUtils.LoadSvgIcon();
         SettingsWindow.WallpaperChanged += OnWallpaperChanged;
         _ownProcessId = (uint)System.Diagnostics.Process.GetCurrentProcess().Id;
     }

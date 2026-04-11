@@ -45,7 +45,15 @@
         </Grid>
 
         <!-- Centered Label (Only if no content) -->
-        <StackPanel x:Name="FallbackText" VerticalAlignment="Center" HorizontalAlignment="Center" Opacity="0.5" IsVisible="True">
+        <StackPanel x:Name="FallbackText" VerticalAlignment="Center" HorizontalAlignment="Center" Opacity="0.5" IsVisible="True" Spacing="20">
+            <Image Width="120" Height="120" HorizontalAlignment="Center">
+                <Image.Source>
+                    <SvgImage Source="avares://openwalls/assets/openwalls_logo.svg" />
+                </Image.Source>
+                <Image.Effect>
+                    <DropShadowEffect BlurRadius="40" Opacity="0.8" Color="#0D4F5C" />
+                </Image.Effect>
+            </Image>
             <TextBlock Text="OPENWALLS" FontSize="72" FontWeight="ExtraBold" Foreground="White" LetterSpacing="10" HorizontalAlignment="Center">
                 <TextBlock.Effect>
                     <DropShadowEffect BlurRadius="20" Opacity="0.5" Color="Black" />

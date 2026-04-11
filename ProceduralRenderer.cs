@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Media;
@@ -40,6 +41,7 @@ public class ProceduralRenderer
     private WallpaperContext _ctx = new();
     private bool _isLoaded = false;
     private string? _securityError;
+    private CancellationTokenSource? _cts;
 
     public ProceduralRenderer(ProceduralCanvas canvas) => _canvas = canvas;
 
@@ -50,6 +52,9 @@ public class ProceduralRenderer
         _isLoaded = false;
         _startTime = DateTime.Now;
         _lastFrameTime = DateTime.Now;
+        
+        _cts = new CancellationTokenSource();
+        var token = _cts.Token;
 
         Task.Run(async () =>
         {
@@ -59,10 +64,12 @@ public class ProceduralRenderer
                 if (!File.Exists(scriptPath)) return;
 
                 var code = File.ReadAllText(scriptPath);
+                if (token.IsCancellationRequested) return;
 
                 // Phase 1: Static Security Scan
                 if (IsMalicious(code, out string violation))
                 {
+                    if (token.IsCancellationRequested) return;
                     Dispatcher.UIThread.Post(() => {
                         _securityError = $"SECURITY VIOLATION: {violation}";
                         _isLoaded = true;
@@ -72,8 +79,10 @@ public class ProceduralRenderer
                 }
 
                 // Phase 2: Lazy Compilation 
-                _scriptRunner = await RoslynCompiler.Compile(code);
+                var runner = await RoslynCompiler.Compile(code);
+                if (token.IsCancellationRequested) return;
                 
+                _scriptRunner = runner;
                 Dispatcher.UIThread.Post(() => {
                     _isLoaded = true;
                     _timer = new DispatcherTimer(TimeSpan.FromMilliseconds(16), DispatcherPriority.Render, Tick);
@@ -82,13 +91,14 @@ public class ProceduralRenderer
             }
             catch (Exception ex)
             {
+                if (token.IsCancellationRequested) return;
                 Dispatcher.UIThread.Post(() => {
                     _securityError = $"COMPILATION ERROR: {ex.Message}";
                     _isLoaded = true;
                     _canvas.InvalidateVisual();
                 });
             }
-        });
+        }, token);
     }
 
     // Nested class to isolate heavy Roslyn dependencies from MainWindow JIT
@@ -96,16 +106,35 @@ public class ProceduralRenderer
     {
         public static async Task<ScriptRunner<object>> Compile(string code)
         {
-            var safeReferences = new[]
+            var assemblies = new[]
             {
-                MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(Enumerable).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(DrawingContext).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(ProceduralRenderer).Assembly.Location)
+                typeof(object).Assembly,
+                typeof(Enumerable).Assembly,
+                typeof(DrawingContext).Assembly,
+                typeof(ProceduralRenderer).Assembly
             };
 
+            var references = assemblies.Select(a => {
+                if (!string.IsNullOrEmpty(a.Location))
+                    return MetadataReference.CreateFromFile(a.Location);
+
+                // Fallback for Single-File / Published builds
+                // Check TRUSTED_PLATFORM_ASSEMBLIES for the actual path to the DLL
+                var name = a.GetName().Name + ".dll";
+                var trustedAssemblies = AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES") as string;
+                if (trustedAssemblies != null)
+                {
+                    var path = trustedAssemblies.Split(Path.PathSeparator)
+                        .FirstOrDefault(p => p.EndsWith(name, StringComparison.OrdinalIgnoreCase));
+                    if (path != null)
+                        return MetadataReference.CreateFromFile(path);
+                }
+
+                throw new Exception($"Metadata for {a.GetName().Name} not found. Please ensure assemblies are available.");
+            }).ToArray();
+
             var options = ScriptOptions.Default
-                .WithReferences(safeReferences)
+                .WithReferences(references)
                 .WithImports("System", "System.Linq", "System.Collections.Generic", "Avalonia", "Avalonia.Media", "openwalls");
 
             var script = CSharpScript.Create(code, options, typeof(WallpaperContext));
@@ -176,6 +205,10 @@ public class ProceduralRenderer
 
     public void Stop()
     {
+        _cts?.Cancel();
+        _cts?.Dispose();
+        _cts = null;
+        
         _timer?.Stop();
         _timer = null;
         _scriptRunner = null;

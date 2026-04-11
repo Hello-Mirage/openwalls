@@ -34,7 +34,7 @@ Openwalls is a high-performance, modular wallpaper engine for Windows, designed 
 
 For developers and creators looking to build custom procedural wallpapers:
 
-- Refer to **MakeforOW.md** for the full API reference and security guidelines.
+- Refer to **MakeforOW.md** for the full API reference and security guidelines, and **docs/MCP_Bridge.md** for connecting AI agents.
 - Modular packs can be shared as simple directories containing a `wallpaper.json` and a `logic.cs` file.
 
 ## Platform Support

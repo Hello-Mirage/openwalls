@@ -99,7 +99,7 @@ public static class VideoOptimizer
 
                         _ = Task.Run(async () => {
                             try {
-                                while (!process.StandardOutput.EndOfStream) {
+                                while (true) {
                                     string? line = await process.StandardOutput.ReadLineAsync();
                                     if (line == null) break;
                                     

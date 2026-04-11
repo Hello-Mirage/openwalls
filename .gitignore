@@ -8,6 +8,11 @@
 ## [Build Results]
 [Bb]in/
 [Oo]bj/
+publish/
+dist/
+*.zip
+*.exe
+*.msi
 Generated\ Files/
 
 ## [NuGet]
@@ -27,6 +32,7 @@ Thumbs.db
 
 ## [Logs]
 *.log
+crash.log
 vlc-log.txt
 
 ## [Node / MCP]
