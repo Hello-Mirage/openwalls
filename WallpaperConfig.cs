@@ -59,6 +59,7 @@ public class WallpaperPreset : INotifyPropertyChanged
     public string? BaseDirectory { get; set; } // Local folder path for modular wallpapers
     public WallpaperType Type { get; set; }
     public bool IsMuted { get; set; } = true;
+    public bool IsAiGenerated { get; set; } = false;
     public DateTime DateAdded { get; set; } = DateTime.Now;
 
     [JsonIgnore]

@@ -74,7 +74,8 @@ server.tool(
       Name: name,
       Type: type,
       Path: "backdrop.jpg",
-      ClockImagePath: type === "Clock" ? "backdrop.jpg" : undefined
+      ClockImagePath: type === "Clock" ? "backdrop.jpg" : undefined,
+      IsAiGenerated: true
     };
 
     fs.writeFileSync(path.resolve(targetDir, "wallpaper.json"), JSON.stringify(config, null, 2));

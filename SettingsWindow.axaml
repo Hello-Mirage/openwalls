@@ -250,6 +250,55 @@
                                                 <TextBlock Text="http://localhost:3000/mcp" FontSize="14" Foreground="White" Margin="0,5,0,0"/>
                                             </StackPanel>
                                         </Grid>
+
+                                        <Border Height="1" Background="#11ffffff" Margin="0,10"/>
+
+                                        <!-- New Gallery Section -->
+                                        <StackPanel Spacing="20">
+                                            <TextBlock Text="GENERATED CANVASES" Classes="Headline" FontSize="16" Foreground="White" LetterSpacing="2"/>
+                                            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                                                <ItemsControl x:Name="AIWallpapersControl">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <StackPanel Orientation="Horizontal" Spacing="20"/>
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate DataType="local:WallpaperPreset">
+                                                            <Button Classes="LofiCard" Margin="0" Padding="0" Background="Transparent" BorderThickness="0" Click="Preset_Click">
+                                                                <Panel>
+                                                                    <Border Width="300" Background="{StaticResource SurfaceLowBrush}" CornerRadius="24" ClipToBounds="True">
+                                                                        <Grid RowDefinitions="*, Auto">
+                                                                            <Panel Grid.Row="0" Height="165">
+                                                                                <Image Stretch="UniformToFill">
+                                                                                    <Image.Source>
+                                                                                        <MultiBinding Converter="{StaticResource ThumbnailConverter}">
+                                                                                            <Binding Path="." />
+                                                                                            <Binding Path="ThumbnailPath" />
+                                                                                        </MultiBinding>
+                                                                                    </Image.Source>
+                                                                                </Image>
+                                                                            </Panel>
+                                                                            <Border Grid.Row="1" Padding="15">
+                                                                                <StackPanel>
+                                                                                    <TextBlock Text="{Binding Name}" Classes="Headline" FontSize="14" Foreground="White" TextTrimming="CharacterEllipsis"/>
+                                                                                    <TextBlock Text="{Binding Type}" Classes="Body" FontSize="10" Foreground="{StaticResource OnSurfaceVariant}" Margin="0,2,0,0"/>
+                                                                                </StackPanel>
+                                                                            </Border>
+                                                                        </Grid>
+                                                                    </Border>
+                                                                    <!-- AI Identifier -->
+                                                                    <Border VerticalAlignment="Top" HorizontalAlignment="Right" Margin="10" 
+                                                                            Background="#22CCFF00" CornerRadius="8" Padding="6,2" BorderThickness="1" BorderBrush="{StaticResource ElectricLimeBrush}">
+                                                                        <TextBlock Text="AI" FontFamily="{StaticResource SpaceGrotesk}" FontWeight="Black" FontSize="8" Foreground="{StaticResource ElectricLimeBrush}"/>
+                                                                    </Border>
+                                                                </Panel>
+                                                            </Button>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </ScrollViewer>
+                                        </StackPanel>
                                     </StackPanel>
                                 </Border>
                             </StackPanel>

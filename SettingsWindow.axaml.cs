@@ -22,7 +22,6 @@ public partial class SettingsWindow : Window
 {
     public static event Action<WallpaperConfig>? WallpaperChanged;
     private readonly LibraryManager _libraryManager = new();
-    private readonly DispatcherTimer _idleTimer;
 
     public SettingsWindow()
     {
@@ -30,21 +29,10 @@ public partial class SettingsWindow : Window
         this.Icon = IconUtils.LoadSvgIcon();
         _libraryManager.LoadLibrary();
         LibraryItemsControl.ItemsSource = _libraryManager.Library;
-
-        // Initialize Zen Reveal Timer (3 seconds)
-        _idleTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
-        _idleTimer.Tick += (s, e) => {
-            // Drop opacity to 10% (The Reveal)
-            this.Opacity = 0.1;
-            _idleTimer.Stop();
-        };
-        _idleTimer.Start();
-
-        this.PointerMoved += (s, e) => {
-            this.Opacity = 1.0;
-            _idleTimer.Stop();
-            _idleTimer.Start();
-        };
+        if (AIWallpapersControl != null)
+        {
+            AIWallpapersControl.ItemsSource = _libraryManager.Library.Where(p => p.IsAiGenerated);
+        }
     }
 
     private void NavList_SelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -135,6 +123,10 @@ public partial class SettingsWindow : Window
     {
         _libraryManager.LoadLibrary();
         LibraryItemsControl.ItemsSource = _libraryManager.Library;
+        if (AIWallpapersControl != null)
+        {
+            AIWallpapersControl.ItemsSource = _libraryManager.Library.Where(p => p.IsAiGenerated);
+        }
     }
 
     protected override void OnClosing(WindowClosingEventArgs e)
