@@ -18,6 +18,8 @@ public partial class ClockEditWindow : Window
     public event Action<WallpaperPreset>? PreviewChanged;
     public event Action? Saved;
 
+    public ClockEditWindow() => InitializeComponent();
+
     public ClockEditWindow(WallpaperPreset preset)
     {
         InitializeComponent();

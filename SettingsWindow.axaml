@@ -18,8 +18,9 @@
         <local:ActiveColorConverter x:Key="ActiveColorConverter"/>
         <local:ThumbnailConverter x:Key="ThumbnailConverter"/>
         <!-- Fluent Icons -->
-        <StreamGeometry x:Key="library_regular">M12,2A10,10,0,1,0,22,12,10.011,10.011,0,0,0,12,2Zm0,18a8,8,0,1,1,8-8A8.009,8.009,0,0,1,12,20ZM11,7h2v6H11Zm0,8h2v2H11Z</StreamGeometry>
+        <StreamGeometry x:Key="library_regular">M4 4h7v7H4V4zm9 0h7v7h-7V4zm-9 9h7v7H4v-7zm9 0h7v7h-7v-7z</StreamGeometry>
         <StreamGeometry x:Key="market_regular">M12,2L2,7v10l10,5 10-5V7L12,2zm0,2.18L19.34,7.5 12,10.82 4.66,7.5 12,4.18zM4,9.27l7,3.18v7.28l-7-3.5V9.27zm9,10.46v-7.28l7-3.18v7.5l-7,2.96z</StreamGeometry>
+        <StreamGeometry x:Key="ai_sparkle">M12,2L14.8,8.5L22,9.2L16.5,13.8L18.2,21L12,17.2L5.8,21L7.5,13.8L2,9.2L9.2,8.5L12,2Z</StreamGeometry>
     </Window.Resources>
 
     <Grid RowDefinitions="Auto, *" Background="{StaticResource BaseBlackBrush}">
@@ -63,6 +64,9 @@
                         <ListBoxItem ToolTip.Tip="OWMarketplace">
                             <PathIcon Data="{StaticResource market_regular}" Width="18" Height="18" Foreground="{StaticResource OnSurfaceVariant}"/>
                         </ListBoxItem>
+                        <ListBoxItem ToolTip.Tip="AI Bridge">
+                            <PathIcon Data="{StaticResource ai_sparkle}" Width="18" Height="18" Foreground="{StaticResource OnSurfaceVariant}"/>
+                        </ListBoxItem>
                     </ListBox>
 
                     <StackPanel Grid.Row="2" Margin="0,20" Spacing="15" HorizontalAlignment="Center">
@@ -88,8 +92,9 @@
                             <Grid ColumnDefinitions="Auto, *">
                                 <PathIcon Data="M11,19A8,8 0 0,1 3,11A8,8 0 0,1 11,3A8,8 0 0,1 19,11A8,8 0 0,1 11,19M11,5A6,6 0 0,0 5,11A6,6 0 0,0 11,17A6,6 0 0,0 17,11A6,6 0 0,0 11,5M23,21.5L20.5,19L19,20.5L21.5,23L23,21.5Z" 
                                           Width="14" Height="14" Foreground="{StaticResource OnSurfaceVariant}" Margin="0,0,10,0"/>
-                                <TextBox Grid.Column="1" Watermark="Search visuals..." Background="Transparent" BorderThickness="0" 
-                                         VerticalContentAlignment="Center" FontSize="12" FontFamily="{StaticResource BeVietnam}">
+                                <TextBox x:Name="SearchBox" Grid.Column="1" Watermark="Search visuals..." Background="Transparent" BorderThickness="0" 
+                                         VerticalContentAlignment="Center" FontSize="12" FontFamily="{StaticResource BeVietnam}"
+                                         TextChanged="SearchBox_TextChanged">
                                     <TextBox.Styles>
                                         <Style Selector="TextBox:focus /template/ Border#PART_Indicator">
                                             <Setter Property="IsVisible" Value="False"/>
@@ -121,9 +126,9 @@
                                     <DataTemplate DataType="local:WallpaperPreset">
                                         <Button Classes="LofiCard" Margin="10" Padding="0" Background="Transparent" BorderThickness="0" Click="Preset_Click">
                                             <Panel>
-                                                <Border Width="240" Background="{StaticResource SurfaceLowBrush}" CornerRadius="32" ClipToBounds="True">
+                                                <Border Width="400" Background="{StaticResource SurfaceLowBrush}" CornerRadius="32" ClipToBounds="True">
                                                     <Grid RowDefinitions="*, Auto">
-                                                        <Panel Grid.Row="0" Height="300">
+                                                        <Panel Grid.Row="0" Height="220">
                                                             <Image Stretch="UniformToFill">
                                                                 <Image.Source>
                                                                     <MultiBinding Converter="{StaticResource ThumbnailConverter}">
@@ -187,6 +192,66 @@
                                     <PathIcon Data="{StaticResource market_regular}" Width="64" Height="64" Foreground="{StaticResource SurfaceMidBrush}"/>
                                     <TextBlock Text="LABS OPTIMIZATION IN PROGRESS" Classes="Headline" FontSize="14" Foreground="{StaticResource SurfaceMidBrush}" HorizontalAlignment="Center" LetterSpacing="4"/>
                                 </StackPanel>
+                            </StackPanel>
+                        </Grid>
+                        <!-- AI Bridge View -->
+                        <Grid x:Name="AIView" RowDefinitions="Auto, *" Margin="30,0" IsVisible="False">
+                            <StackPanel Grid.Row="0" Margin="0,10,0,40">
+                                <TextBlock Text="AI Studio" Classes="Headline" FontSize="48" Foreground="White"/>
+                                <TextBlock Text="Manage your AI Bridge and modular agent connections." Classes="Body" FontSize="14" Foreground="{StaticResource OnSurfaceVariant}"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="1" Spacing="30">
+                                <Border Background="{StaticResource SurfaceLowBrush}" CornerRadius="32" Padding="40">
+                                    <StackPanel Spacing="20">
+                                        <PathIcon Data="{StaticResource ai_sparkle}" Width="48" Height="48" Foreground="{StaticResource ElectricLimeBrush}" HorizontalAlignment="Left"/>
+                                        <TextBlock Text="AI BRIDGE :: ACTIVE" Classes="Headline" FontSize="20" Foreground="White"/>
+                                        <TextBlock Text="Connection established via Model Context Protocol (MCP). Your AI agents can now browse and edit wallpapers." Classes="Body" FontSize="13" Foreground="{StaticResource OnSurfaceVariant}" TextWrapping="Wrap"/>
+                                        
+                                        <Border Height="1" Background="#11ffffff" Margin="0,10"/>
+                                        
+                                        <!-- Collapsible Connection Guide -->
+                                        <Expander Header="HOW TO CONNECT TO THE MCP SERVER?" 
+                                                  Foreground="{StaticResource ElectricLimeBrush}"
+                                                  Background="Transparent"
+                                                  BorderThickness="1"
+                                                  BorderBrush="#22ffffff"
+                                                  CornerRadius="16"
+                                                  HorizontalAlignment="Stretch"
+                                                  Padding="20">
+                                            <StackPanel Spacing="15" Margin="0,10,0,0">
+                                                <TextBlock Text="To allow Claude Desktop to manage your library, follow these steps:" 
+                                                           Classes="Body" FontSize="12" Foreground="White" TextWrapping="Wrap"/>
+                                                
+                                                <TextBlock Text="1. Open %APPDATA%\Claude\claude_desktop_config.json" 
+                                                           Classes="Body" FontSize="11" Foreground="{StaticResource OnSurfaceVariant}"/>
+                                                
+                                                <TextBlock Text="2. Add the following to 'mcpServers':" 
+                                                           Classes="Body" FontSize="11" Foreground="{StaticResource OnSurfaceVariant}"/>
+                                                
+                                                <Border Background="{StaticResource BaseBlackBrush}" Padding="15" CornerRadius="12">
+                                                    <TextBlock FontSize="11" FontFamily="Consolas, monospace" Foreground="#66ff66">
+                                                        <TextBlock.Inlines>
+                                                            <Run>"{&#10;  "mcpServers": {&#10;    "openwalls-bridge": {&#10;      "command": "npx",&#10;      "args": ["-y", "tsx", "D:/openwalls/mcp/index.ts"],&#10;      "cwd": "D:/openwalls/mcp"&#10;    }&#10;  }&#10;}"</Run>
+                                                        </TextBlock.Inlines>
+                                                    </TextBlock>
+                                                </Border>
+
+                                                <TextBlock Text="3. Save and RESTART Claude Desktop completely." 
+                                                           Classes="Body" FontSize="11" Foreground="{StaticResource OnSurfaceVariant}"/>
+                                            </StackPanel>
+                                        </Expander>
+
+                                        <Border Height="1" Background="#11ffffff" Margin="0,10"/>
+                                        
+                                        <Grid ColumnDefinitions="*, Auto">
+                                            <StackPanel>
+                                                <TextBlock Text="LOCAL ENDPOINT" FontSize="10" Foreground="{StaticResource SurfaceMidBrush}" LetterSpacing="2"/>
+                                                <TextBlock Text="http://localhost:3000/mcp" FontSize="14" Foreground="White" Margin="0,5,0,0"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
                             </StackPanel>
                         </Grid>
                     </Grid>

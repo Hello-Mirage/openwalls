@@ -49,9 +49,10 @@ public partial class SettingsWindow : Window
 
     private void NavList_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (LibraryView == null || MarketplaceView == null) return;
+        if (LibraryView == null || MarketplaceView == null || AIView == null) return;
         LibraryView.IsVisible = NavList.SelectedIndex == 0;
         MarketplaceView.IsVisible = NavList.SelectedIndex == 1;
+        AIView.IsVisible = NavList.SelectedIndex == 2;
     }
 
     private async void AddNew_Click(object? sender, RoutedEventArgs e)
@@ -145,5 +146,23 @@ public partial class SettingsWindow : Window
     private void DragStrip_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) this.BeginMoveDrag(e);
+    }
+
+    private void SearchBox_TextChanged(object? sender, TextChangedEventArgs e)
+    {
+        if (_libraryManager == null || LibraryItemsControl == null) return;
+        
+        var query = SearchBox.Text?.ToLower() ?? "";
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            LibraryItemsControl.ItemsSource = _libraryManager.Library;
+        }
+        else
+        {
+            var filtered = _libraryManager.Library.Where(p => 
+                p.Name.ToLower().Contains(query) || 
+                p.Type.ToString().ToLower().Contains(query));
+            LibraryItemsControl.ItemsSource = filtered;
+        }
     }
 }
