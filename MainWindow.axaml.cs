@@ -52,6 +52,8 @@ public partial class MainWindow : Window, IWallpaperDisplay
     Grid IWallpaperDisplay.ClockBackdropLayer => ClockBackdropLayer;
     Image IWallpaperDisplay.ClockBackground => ClockBackground;
     Panel IWallpaperDisplay.FallbackText => FallbackText;
+    int IWallpaperDisplay.DisplayWidth => _screenWidth;
+    int IWallpaperDisplay.DisplayHeight => _screenHeight;
 
     public MainWindow()
     {
@@ -69,6 +71,11 @@ public partial class MainWindow : Window, IWallpaperDisplay
         {
             _screenWidth = Screens.Primary.Bounds.Width;
             _screenHeight = Screens.Primary.Bounds.Height;
+            
+            // Explicitly set logical window size to match monitor bounds
+            // This prevents Avalonia from centering layout in a smaller logical box
+            Width = _screenWidth;
+            Height = _screenHeight;
         }
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -102,25 +109,7 @@ public partial class MainWindow : Window, IWallpaperDisplay
         // Initialize Manager
         _wallpaperManager = new WallpaperManager(this, _libVLC, _mediaPlayer, _proceduralRenderer, _clockHUD);
 
-        // Subscribe to Optimization Progress
-        VideoOptimizer.OptimizationStarted += path => Dispatcher.UIThread.Post(() => {
-            if (OptimizationStatusHUD != null) OptimizationStatusHUD.IsVisible = true;
-        });
-
-        VideoOptimizer.ProgressUpdated += (path, percent) => Dispatcher.UIThread.Post(() => {
-            if (OptimizationProgressBar != null) OptimizationProgressBar.Value = percent;
-            if (OptimizationProgressPercent != null) OptimizationProgressPercent.Text = $"{(int)percent}%";
-        });
-
-        VideoOptimizer.OptimizationFinished += (path, success) => Dispatcher.UIThread.Post(() => {
-            if (OptimizationStatusHUD != null) OptimizationStatusHUD.IsVisible = false;
-            // Refresh if the current video was just optimized
-            if (success) {
-                var preset = _config.Library.FirstOrDefault(p => p.Id == _config.CurrentPresetId);
-                if (preset?.GetResourcePath(preset.Path) == path) OnWallpaperChanged(_config);
-            }
-        });
-
+        // Background Optimization logic handled by VideoOptimizer
         StartBackgroundOptimization();
         LoadConfig();
     }

@@ -29,6 +29,18 @@ public class WallpaperContext
             FlowDirection.LeftToRight, Typeface.Default, size, foreground);
         dc.DrawText(ft, pos);
     }
+
+    public void DrawLine(Point p1, Point p2, IBrush brush, double thickness) =>
+        dc.DrawLine(new Pen(brush, thickness), p1, p2);
+
+    public void FillRect(Rect rect, IBrush brush) =>
+        dc.FillRectangle(brush, rect);
+
+    public void DrawRect(Rect rect, IBrush brush, double thickness) =>
+        dc.DrawRectangle(new Pen(brush, thickness), rect);
+
+    public void FillCircle(Point center, double radius, IBrush brush) =>
+        dc.DrawEllipse(brush, null, center, radius, radius);
 }
 
 public class ProceduralRenderer
@@ -156,7 +168,9 @@ public class ProceduralRenderer
 
         foreach (var token in blacklisted)
         {
-            if (code.Contains(token, StringComparison.OrdinalIgnoreCase))
+            // Use regex for whole-word matching to avoid false positives like "Remove" matching "Move"
+            string pattern = $@"\b{System.Text.RegularExpressions.Regex.Escape(token)}\b";
+            if (System.Text.RegularExpressions.Regex.IsMatch(code, pattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase))
             {
                 violation = $"Forbidden Token Detected: '{token}'";
                 return true;

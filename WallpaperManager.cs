@@ -19,6 +19,8 @@ public interface IWallpaperDisplay
     Grid ClockBackdropLayer { get; }
     Image ClockBackground { get; }
     Panel FallbackText { get; }
+    int DisplayWidth { get; }
+    int DisplayHeight { get; }
 }
 
 public class WallpaperManager : IDisposable
@@ -50,9 +52,10 @@ public class WallpaperManager : IDisposable
 
         ResetLayers();
         
-        if (_mediaPlayer.IsPlaying || _mediaPlayer.State == VLCState.Paused) 
         {
             _mediaPlayer.Stop();
+            _mediaPlayer.AspectRatio = null;
+            _mediaPlayer.CropGeometry = null;
         }
         _proceduralRenderer.Stop();
         _isOptimizationPaused = false;
@@ -147,6 +150,15 @@ public class WallpaperManager : IDisposable
                 if (preset.IsMuted) _mediaPlayer!.Mute = true;
                 _display.VideoLayer.IsVisible = true;
                 _display.VideoLayer.Opacity = 1;
+                
+                // Force Fill
+                if (_display.DisplayWidth > 0 && _display.DisplayHeight > 0)
+                {
+                    string ratio = $"{_display.DisplayWidth}:{_display.DisplayHeight}";
+                    _mediaPlayer!.AspectRatio = ratio;
+                    _mediaPlayer!.CropGeometry = ratio;
+                }
+
                 _mediaPlayer!.Play(media);
             }
             catch (Exception ex)
@@ -165,6 +177,14 @@ public class WallpaperManager : IDisposable
         sourceMedia.AddOption(":input-repeat=65535");
         _display.VideoLayer.IsVisible = true;
         _display.VideoLayer.Opacity = 1;
+
+        if (_display.DisplayWidth > 0 && _display.DisplayHeight > 0)
+        {
+            string ratio = $"{_display.DisplayWidth}:{_display.DisplayHeight}";
+            _mediaPlayer!.AspectRatio = ratio;
+            _mediaPlayer!.CropGeometry = ratio;
+        }
+
         _mediaPlayer!.Play(sourceMedia);
     }
 
@@ -193,6 +213,14 @@ public class WallpaperManager : IDisposable
                     _mediaPlayer!.Mute = true;
                     _display.VideoLayer.IsVisible = true;
                     _display.VideoLayer.Opacity = 1;
+                    
+                    if (_display.DisplayWidth > 0 && _display.DisplayHeight > 0)
+                    {
+                        string ratio = $"{_display.DisplayWidth}:{_display.DisplayHeight}";
+                        _mediaPlayer!.AspectRatio = ratio;
+                        _mediaPlayer!.CropGeometry = ratio;
+                    }
+
                     _mediaPlayer!.Play(media);
                 }
                 catch { PlaySourceVideo(videoPath); }

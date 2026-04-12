@@ -29,5 +29,11 @@
     "Name": "Fire Storm",
     "Type": "Procedural",
     "ThumbnailPath": "thumbnail.png"
+  },
+  {
+    "Id": "hackerman-studio-elite",
+    "Name": "Hackerman",
+    "Type": "Procedural",
+    "ThumbnailPath": "thumbnail.png"
   }
 ]

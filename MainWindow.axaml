@@ -30,17 +30,27 @@
         <Border x:Name="GradientLayer" IsVisible="True" Background="Black"/>
 
         <!-- Layer 2: Image -->
-        <Image x:Name="ImageLayer" Stretch="UniformToFill" IsVisible="False" Opacity="0"/>
+        <Image x:Name="ImageLayer" 
+               Stretch="UniformToFill" 
+               HorizontalAlignment="Stretch" 
+               VerticalAlignment="Stretch" 
+               IsVisible="False" Opacity="0"/>
 
         <!-- Layer 3: Video -->
-        <vlc:VideoView x:Name="VideoLayer" IsVisible="False" Opacity="0"/>
+        <vlc:VideoView x:Name="VideoLayer" 
+                       HorizontalAlignment="Stretch" 
+                       VerticalAlignment="Stretch" 
+                       IsVisible="False" Opacity="0"/>
 
         <!-- Layer 4: Procedural C# Animations -->
         <local:ProceduralCanvas x:Name="ProceduralLayer" IsVisible="False"/>
 
         <!-- Layer 5: Zen Clock Background (The image/video backup for the clock) -->
         <Grid x:Name="ClockBackdropLayer" IsVisible="False">
-            <Image x:Name="ClockBackground" Stretch="UniformToFill" />
+            <Image x:Name="ClockBackground" 
+                   Stretch="UniformToFill" 
+                   HorizontalAlignment="Stretch" 
+                   VerticalAlignment="Stretch" />
             <Border Background="Black" Opacity="0.2" /> 
         </Grid>
 
@@ -61,40 +71,5 @@
             </TextBlock>
         </StackPanel>
 
-        <!-- Layer 7: Optimization Progress HUD (Bottom) -->
-        <Border x:Name="OptimizationStatusHUD" 
-                VerticalAlignment="Bottom" 
-                HorizontalAlignment="Stretch" 
-                Height="60" 
-                Background="#AA000000" 
-                IsVisible="False">
-            <Grid ColumnDefinitions="Auto, *, Auto" Margin="30, 0">
-                <TextBlock x:Name="OptimizationStatusText" 
-                           VerticalAlignment="Center" 
-                           Foreground="White" 
-                           FontSize="14" 
-                           FontWeight="Medium"
-                           Text="Optimizing Video for GPU Acceleration..."/>
-                
-                <ProgressBar x:Name="OptimizationProgressBar" 
-                             Grid.Column="1" 
-                             Margin="20, 0" 
-                             Height="4" 
-                             Minimum="0" 
-                             Maximum="100" 
-                             Value="0"
-                             Foreground="#00ccff"
-                             Background="#44ffffff"/>
-
-                <TextBlock x:Name="OptimizationProgressPercent" 
-                           Grid.Column="2" 
-                           VerticalAlignment="Center" 
-                           Foreground="White" 
-                           FontSize="14" 
-                           Width="50"
-                           TextAlignment="Right"
-                           Text="0%"/>
-            </Grid>
-        </Border>
     </Grid>
 </Window>

@@ -1,10 +1,50 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="openwalls.App"
-             RequestedThemeVariant="Default">
-             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+             RequestedThemeVariant="Dark">
+
+    <Application.Resources>
+        <Color x:Key="BaseBlack">#0e0e0e</Color>
+        <Color x:Key="SurfaceLow">#131313</Color>
+        <Color x:Key="SurfaceMid">#191a1a</Color>
+        <Color x:Key="ElectricLime">#CCFF00</Color>
+        <Color x:Key="OnSurfaceVariant">#adaaaa</Color>
+        
+        <SolidColorBrush x:Key="BaseBlackBrush" Color="{StaticResource BaseBlack}"/>
+        <SolidColorBrush x:Key="SurfaceLowBrush" Color="{StaticResource SurfaceLow}"/>
+        <SolidColorBrush x:Key="ElectricLimeBrush" Color="{StaticResource ElectricLime}"/>
+        
+        <FontFamily x:Key="SpaceGrotesk">avares://openwalls/assets/fonts/SpaceGrotesk-Bold.ttf#Space Grotesk</FontFamily>
+        <FontFamily x:Key="BeVietnam">avares://openwalls/assets/fonts/BeVietnamPro-Regular.ttf#Be Vietnam Pro, avares://openwalls/assets/fonts/BeVietnamPro-Medium.ttf#Be Vietnam Pro</FontFamily>
+    </Application.Resources>
 
     <Application.Styles>
         <FluentTheme />
+        
+        <!-- Global Utilities -->
+        <Style Selector="TextBlock.Headline">
+            <Setter Property="FontFamily" Value="{StaticResource SpaceGrotesk}"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="LetterSpacing" Value="-1.5"/>
+        </Style>
+        
+        <Style Selector="TextBlock.Body">
+            <Setter Property="FontFamily" Value="{StaticResource BeVietnam}"/>
+        </Style>
+        
+        <Style Selector="Button.Pill">
+            <Setter Property="CornerRadius" Value="9999"/>
+            <Setter Property="Padding" Value="20,10"/>
+            <Setter Property="FontFamily" Value="{StaticResource SpaceGrotesk}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.2"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.Pill:pointerover">
+            <Setter Property="RenderTransform" Value="scale(1.05)"/>
+        </Style>
     </Application.Styles>
 </Application>

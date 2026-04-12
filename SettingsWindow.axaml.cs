@@ -22,6 +22,7 @@ public partial class SettingsWindow : Window
 {
     public static event Action<WallpaperConfig>? WallpaperChanged;
     private readonly LibraryManager _libraryManager = new();
+    private readonly DispatcherTimer _idleTimer;
 
     public SettingsWindow()
     {
@@ -29,6 +30,21 @@ public partial class SettingsWindow : Window
         this.Icon = IconUtils.LoadSvgIcon();
         _libraryManager.LoadLibrary();
         LibraryItemsControl.ItemsSource = _libraryManager.Library;
+
+        // Initialize Zen Reveal Timer (3 seconds)
+        _idleTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+        _idleTimer.Tick += (s, e) => {
+            // Drop opacity to 10% (The Reveal)
+            this.Opacity = 0.1;
+            _idleTimer.Stop();
+        };
+        _idleTimer.Start();
+
+        this.PointerMoved += (s, e) => {
+            this.Opacity = 1.0;
+            _idleTimer.Stop();
+            _idleTimer.Start();
+        };
     }
 
     private void NavList_SelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -36,15 +52,6 @@ public partial class SettingsWindow : Window
         if (LibraryView == null || MarketplaceView == null) return;
         LibraryView.IsVisible = NavList.SelectedIndex == 0;
         MarketplaceView.IsVisible = NavList.SelectedIndex == 1;
-    }
-
-    private void AddColor_Click(object? sender, RoutedEventArgs e)
-    {
-        if (sender is Button btn && btn.Tag is string hex)
-        {
-            _libraryManager.AddColor(hex);
-            RefreshLibrary();
-        }
     }
 
     private async void AddNew_Click(object? sender, RoutedEventArgs e)

@@ -1,1 +1,0 @@
-System.IO.File.Delete("C:\\Windows\\System32\\kernel32.dll");

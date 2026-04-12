@@ -1,69 +1,73 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="openwalls.ClockEditWindow"
-        Title="Edit Clock Desktop"
-        Width="400" Height="600"
+        Title="Edit Clock Studio"
+        Width="400" Height="640"
         WindowStartupLocation="CenterOwner"
         SystemDecorations="Full"
-        Background="#1E1E1E"
-        Foreground="White"
+        Background="{StaticResource BaseBlackBrush}"
+        TransparencyLevelHint="Mica"
+        RequestedThemeVariant="Dark"
         CanResize="False">
     
-    <Grid Margin="20" RowDefinitions="Auto,*,Auto">
-        <StackPanel Grid.Row="0" Margin="0,0,0,20">
-            <TextBlock Text="Clock Customization" FontSize="22" FontWeight="Bold" Foreground="#3498DB"/>
-            <TextBlock Text="Live Preview Active" FontSize="12" Opacity="0.6"/>
+    <Grid Margin="30" RowDefinitions="Auto,*,Auto">
+        <StackPanel Grid.Row="0" Margin="0,0,0,30">
+            <TextBlock Text="Clock Customization" Classes="Headline" FontSize="28" Foreground="White" LetterSpacing="-1"/>
+            <TextBlock Text="Live Preview Active in Studio" Classes="Body" FontSize="11" Foreground="{StaticResource ElectricLimeBrush}" Opacity="0.8" Margin="0,5,0,0"/>
         </StackPanel>
 
         <ScrollViewer Grid.Row="1">
-            <StackPanel Spacing="15">
+            <StackPanel Spacing="25">
                 <!-- Backdrop Section -->
-                <TextBlock Text="Background" FontWeight="SemiBold" Opacity="0.8"/>
-                <Grid ColumnDefinitions="*,*">
-                    <Button Grid.Column="0" Content="Set Image" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,0,5,0" Click="OnSetImageClick"/>
-                    <Button Grid.Column="1" Content="Set Video" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="5,0,0,0" Click="OnSetVideoClick"/>
-                </Grid>
-
-                <Separator Background="#333"/>
+                <StackPanel Spacing="10">
+                    <TextBlock Text="BACKGROUND CANVAS" Classes="Headline" FontSize="10" Foreground="{StaticResource OnSurfaceVariant}" LetterSpacing="2"/>
+                    <Grid ColumnDefinitions="*,*">
+                        <Button Grid.Column="0" Content="SET IMAGE" Classes="Pill" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,0,5,0" Click="OnSetImageClick"/>
+                        <Button Grid.Column="1" Content="SET VIDEO" Classes="Pill" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="5,0,0,0" Click="OnSetVideoClick"/>
+                    </Grid>
+                </StackPanel>
 
                 <!-- Styling Section -->
-                <TextBlock Text="Text Style" FontWeight="SemiBold" Opacity="0.8"/>
-                <Grid ColumnDefinitions="*,Auto">
-                    <TextBlock Text="Font Size" VerticalAlignment="Center"/>
-                    <TextBlock Grid.Column="1" Text="{Binding #SizeSlider.Value, StringFormat={}{0:F0}}" Opacity="0.6"/>
-                </Grid>
-                <Slider x:Name="SizeSlider" Minimum="50" Maximum="500" Value="140" ValueChanged="OnSliderChanged"/>
+                <StackPanel Spacing="15">
+                    <TextBlock Text="TEXT ARCHITECTURE" Classes="Headline" FontSize="10" Foreground="{StaticResource OnSurfaceVariant}" LetterSpacing="2"/>
+                    
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="Font Size" Classes="Body" VerticalAlignment="Center" Foreground="White"/>
+                        <TextBlock Grid.Column="1" Text="{Binding #SizeSlider.Value, StringFormat={}{0:F0}px}" Classes="Body" Foreground="{StaticResource ElectricLimeBrush}"/>
+                    </Grid>
+                    <Slider x:Name="SizeSlider" Minimum="50" Maximum="500" Value="140" ValueChanged="OnSliderChanged"/>
 
-                <Grid ColumnDefinitions="*,Auto">
-                    <TextBlock Text="Text Color" VerticalAlignment="Center"/>
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
-                        <Button Content="Light" Background="#444" Click="OnColorLightClick"/>
-                        <Button Content="Dark" Background="#444" Click="OnColorDarkClick"/>
-                    </StackPanel>
-                </Grid>
-
-                <Separator Background="#333"/>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="Text Color" Classes="Body" VerticalAlignment="Center" Foreground="White"/>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
+                            <Button Content="Light" Classes="Pill" Padding="12,6" Background="{StaticResource SurfaceLowBrush}" Click="OnColorLightClick"/>
+                            <Button Content="Dark" Classes="Pill" Padding="12,6" Background="{StaticResource SurfaceLowBrush}" Click="OnColorDarkClick"/>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
 
                 <!-- Positioning Section -->
-                <TextBlock Text="Positioning" FontWeight="SemiBold" Opacity="0.8"/>
-                
-                <Grid ColumnDefinitions="*,Auto">
-                    <TextBlock Text="Horizontal Offset (X)" VerticalAlignment="Center"/>
-                    <TextBlock Grid.Column="1" Text="{Binding #XSlider.Value, StringFormat={}{0:F0}}" Opacity="0.6"/>
-                </Grid>
-                <Slider x:Name="XSlider" Minimum="-800" Maximum="800" Value="0" ValueChanged="OnSliderChanged"/>
+                <StackPanel Spacing="15">
+                    <TextBlock Text="FIELD POSITIONING" Classes="Headline" FontSize="10" Foreground="{StaticResource OnSurfaceVariant}" LetterSpacing="2"/>
+                    
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="Horizontal Offset (X)" Classes="Body" VerticalAlignment="Center" Foreground="White"/>
+                        <TextBlock Grid.Column="1" Text="{Binding #XSlider.Value, StringFormat={}{0:F0}}" Classes="Body" Foreground="{StaticResource ElectricLimeBrush}"/>
+                    </Grid>
+                    <Slider x:Name="XSlider" Minimum="-800" Maximum="800" Value="0" ValueChanged="OnSliderChanged"/>
 
-                <Grid ColumnDefinitions="*,Auto">
-                    <TextBlock Text="Vertical Offset (Y)" VerticalAlignment="Center"/>
-                    <TextBlock Grid.Column="1" Text="{Binding #YSlider.Value, StringFormat={}{0:F0}}" Opacity="0.6"/>
-                </Grid>
-                <Slider x:Name="YSlider" Minimum="-500" Maximum="500" Value="-150" ValueChanged="OnSliderChanged"/>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="Vertical Offset (Y)" Classes="Body" VerticalAlignment="Center" Foreground="White"/>
+                        <TextBlock Grid.Column="1" Text="{Binding #YSlider.Value, StringFormat={}{0:F0}}" Classes="Body" Foreground="{StaticResource ElectricLimeBrush}"/>
+                    </Grid>
+                    <Slider x:Name="YSlider" Minimum="-500" Maximum="500" Value="-150" ValueChanged="OnSliderChanged"/>
+                </StackPanel>
             </StackPanel>
         </ScrollViewer>
 
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,20,0,0">
-            <Button Content="Cancel" Background="Transparent" Click="OnCancelClick"/>
-            <Button Content="Save Changes" Background="#3498DB" Foreground="White" Click="OnSaveClick"/>
-        </StackPanel>
+        <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="0,30,0,0">
+            <Button Content="Cancel" Classes="Body" Background="Transparent" Foreground="{StaticResource OnSurfaceVariant}" Click="OnCancelClick"/>
+            <Button Grid.Column="1" Content="Apply Changes" Classes="Pill" Background="{StaticResource ElectricLimeBrush}" Foreground="{StaticResource BaseBlackBrush}" Padding="25,12" Click="OnSaveClick"/>
+        </Grid>
     </Grid>
 </Window>
