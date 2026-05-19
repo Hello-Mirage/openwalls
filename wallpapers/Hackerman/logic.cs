@@ -1,132 +1,156 @@
-// ELITE HACKERMAN HUD v2.0
-// [Electric Lofi Edition]
-// No forbidden tokens detected
-
+// REDLINE CYBER-SPHERE v3.0
+// [Intense Hacking Interface]
 using System;
 using System.Collections.Generic;
 using Avalonia;
 using Avalonia.Media;
-using openwalls;
 
-HudState state;
-if (!State.ContainsKey("hud")) {
-    state = new HudState();
-    State["hud"] = state;
+RedlineState state;
+if (!State.ContainsKey("redline")) {
+    state = new RedlineState();
+    // Initialize some initial circuits
+    for(int i = 0; i < 20; i++) state.Circuits.Add(new CircuitLine(new Rect(Bounds)));
+    State["redline"] = state;
 } else {
-    state = (HudState)State["hud"];
+    state = (RedlineState)State["redline"];
 }
 
-dc.FillRectangle(Brushes.Black, new Rect(Bounds));
+dc.FillRectangle(new SolidColorBrush(Color.Parse("#080202")), new Rect(Bounds));
 
-// --- DESIGN TOKENS ---
-var lime = new SolidColorBrush(Color.Parse("#CCFF00"));
-var limeDim = new SolidColorBrush(Color.Parse("#22CCFF00"));
-var limeMid = new SolidColorBrush(Color.Parse("#44CCFF00"));
-var accent = new SolidColorBrush(Color.Parse("#FF0055")); // Subtle alert accent
+// --- COLOR TOKENS ---
+var redGlow = new SolidColorBrush(Color.Parse("#FF1122"));
+var redMid = new SolidColorBrush(Color.Parse("#880511"));
+var redDim = new SolidColorBrush(Color.Parse("#330005"));
+var whiteHot = new SolidColorBrush(Color.Parse("#FFDDDD"));
 
-// --- LAYER 0: CIRCUIT GRID ---
-float gridSize = 100;
-float gridPulse = (float)(Math.Sin(Time.TotalSeconds * 0.5) * 0.5 + 0.5);
-var gridPen = new SolidColorBrush(Color.FromArgb((byte)(gridPulse * 30), 204, 255, 0));
-
-for (float x = 0; x < Bounds.Width; x += gridSize) {
-    DrawLine(new Point(x, 0), new Point(x, Bounds.Height), gridPen, 1);
-}
-for (float y = 0; y < Bounds.Height; y += gridSize) {
-    DrawLine(new Point(0, y), new Point(Bounds.Width, y), gridPen, 1);
-}
-
-// --- LAYER 1: ROTATING HUD RING ---
-state.HudRotate += DeltaTime * 0.2f;
-float centerX = (float)Bounds.Width - 300;
+float centerX = (float)Bounds.Width / 2;
 float centerY = (float)Bounds.Height / 2;
 
-// Outer Ring
-for (int i = 0; i < 8; i++) {
-    float angle = state.HudRotate + i * (float)Math.PI / 4;
-    float x1 = centerX + (float)Math.Cos(angle) * 180;
-    float y1 = centerY + (float)Math.Sin(angle) * 180;
-    float x2 = centerX + (float)Math.Cos(angle + 0.2) * 200;
-    float y2 = centerY + (float)Math.Sin(angle + 0.2) * 200;
-    DrawLine(new Point(x1, y1), new Point(x2, y2), limeMid, 4);
+// --- 1. THE GRID ---
+float gridSize = 80;
+float offset = (float)(Time.TotalSeconds * 20 % gridSize);
+for (float x = offset; x < Bounds.Width; x += gridSize) {
+    DrawLine(new Point(x, 0), new Point(x, Bounds.Height), redDim, 1);
+}
+for (float y = offset; y < Bounds.Height; y += gridSize) {
+    DrawLine(new Point(0, y), new Point(Bounds.Width, y), redDim, 1);
 }
 
-// Inner pulse
-float innerPulse = (float)(Math.Sin(Time.TotalSeconds * 2) * 20 + 100);
-DrawRect(new Rect(centerX - (innerPulse/2), centerY - (innerPulse/2), innerPulse, innerPulse), limeDim, 2);
-
-// --- LAYER 2: NETWORK SPIKE GRAPH ---
-state.GraphTimer += DeltaTime;
-if (state.GraphTimer > 0.05f) {
-    state.GraphTimer = 0;
-    state.GraphData.Add((float)Rng.NextDouble() * 100);
-    if (state.GraphData.Count > 100) state.GraphData.RemoveAt(0);
+// --- 2. DYNAMIC CIRCUITS ---
+foreach(var c in state.Circuits) {
+    c.Update(DeltaTime, new Rect(Bounds));
+    c.Draw(dc, redMid, redGlow, whiteHot);
 }
 
-float graphW = (float)Bounds.Width * 0.6f;
-float graphH = 150;
-float graphX = 50;
-float graphY = (float)Bounds.Height - 200;
+// Randomly add/remove circuits
+if (Rng.NextDouble() < 0.05 && state.Circuits.Count < 40) state.Circuits.Add(new CircuitLine(new Rect(Bounds)));
 
-for (int i = 1; i < state.GraphData.Count; i++) {
-    float x1 = graphX + (i-1) * (graphW / 100);
-    float y1 = graphY + (graphH - state.GraphData[i-1]);
-    float x2 = graphX + i * (graphW / 100);
-    float y2 = graphY + (graphH - state.GraphData[i]);
-    DrawLine(new Point(x1, y1), new Point(x2, y2), lime, 2);
-    
-    // Fill under spike
-    if (i % 5 == 0) {
-        DrawLine(new Point(x2, y2), new Point(x2, graphY + graphH), limeDim, 1);
-    }
-}
-DrawText("UPLINK THROUGHPUT :: 8.4 TB/S", new Point(graphX, graphY - 25), 12, lime);
+// --- 3. CENTRAL DATA BOX ---
+float boxW = 500;
+float boxH = 400;
+float boxX = centerX - boxW/2;
+float boxY = centerY - boxH/2;
 
-// --- LAYER 3: SCROLLING HEX STRIP ---
-state.HexTimer += DeltaTime;
-if (state.HexTimer > 0.08f) {
-    state.HexTimer = 0;
-    state.HexIndex = (state.HexIndex + 1) % 50;
+// Box shadow / inner glow
+FillRect(new Rect(boxX, boxY, boxW, boxH), new SolidColorBrush(Color.Parse("#DD020000")));
+DrawRect(new Rect(boxX, boxY, boxW, boxH), redGlow, 2);
+DrawRect(new Rect(boxX - 5, boxY - 5, boxW + 10, boxH + 10), redMid, 1);
+
+// Decryption Logs
+state.WaitTimer -= DeltaTime;
+if (state.WaitTimer <= 0) {
+    state.WaitTimer = (float)Rng.NextDouble() * 0.1f;
+    string prefix = Rng.NextDouble() > 0.5 ? "01101011 : " : "01101010 : ";
+    string[] msgs = { "SYS.ACCESS.GRANTED", "NET_BREACH_V3", "SEC.DECRYPTION.BROKEN", "FIREWALL.OVERRIDE.ACTIVE", ">RUN CRACK.EXE", "STATUS: DECRYPTING", "DATA_STREAM_42", "KERNEL..LEVEL..ROOT" };
+    state.Logs.Add(prefix + msgs[Rng.Next(msgs.Length)]);
+    if (state.Logs.Count > 18) state.Logs.RemoveAt(0);
 }
 
-for (int i = 0; i < 50; i++) {
-    string hex = ((state.HexIndex + i) * 12345).ToString("X8");
-    float op = (float)i / 50.0f;
-    var b = new SolidColorBrush(Color.FromArgb((byte)(op * 100), 204, 255, 0));
-    DrawText(hex, new Point(Bounds.Width - 120, i * 20 + 50), 10, b);
-}
-
-// --- LAYER 4: TERMINAL CONSOLE ---
-state.MsgTimer += DeltaTime;
-if (state.MsgTimer > 0.15f) {
-    state.MsgTimer = 0;
-    string[] protos = { "TCP", "UPLINK", "KRNL", "INJECT", "MAP", "SYNC" };
-    string[] stats = { "OK", "FAIL", "88%", "99%", "EXEC", "VOID" };
-    state.Logs.Add($"> [{DateTime.Now:HH:mm:ss}] {protos[Rng.Next(protos.Length)]} :: {stats[Rng.Next(stats.Length)]}");
-    if (state.Logs.Count > 25) state.Logs.RemoveAt(0);
-}
-
-FillRect(new Rect(50, 50, 400, 650), new SolidColorBrush(Color.Parse("#AA000000")));
-DrawRect(new Rect(50, 50, 400, 650), limeMid, 1);
-DrawText("PROCESS_MONITOR_V2.0", new Point(60, 60), 12, lime);
+DrawText("01101011", new Point(boxX + 20, boxY + 20), 24, whiteHot);
+DrawLine(new Point(boxX + 20, boxY + 55), new Point(boxX + 160, boxY + 55), redGlow, 2);
 
 for (int i = 0; i < state.Logs.Count; i++) {
-    DrawText(state.Logs[i], new Point(70, i * 20 + 90), 11, lime);
+    DrawText(state.Logs[i], new Point(boxX + 20, boxY + 70 + (i * 16)), 12, redGlow);
 }
 
-// --- SIGNATURE ---
-var bigFont = new Typeface("Space Grotesk", FontStyle.Italic, FontWeight.Black);
-var ft = new FormattedText("HACKERMAN", System.Globalization.CultureInfo.CurrentCulture, 
-    FlowDirection.LeftToRight, bigFont, 56, lime);
-dc.DrawText(ft, new Point(Bounds.Width - 450, Bounds.Height - 120));
-DrawText("ELITE CYBER-STUDIO // DEC-77", new Point(Bounds.Width - 450, Bounds.Height - 150), 14, limeMid);
+// Right side of data box
+state.HexRotate -= DeltaTime * 2f;
+for(int i = 0; i < 6; i++) {
+    DrawLine(new Point(boxX + boxW - 80, boxY + 60 + (i*15)), new Point(boxX + boxW - 20, boxY + 60 + (i*15)), redMid, 2);
+}
 
-public class HudState {
-    public List<float> GraphData = new();
+// Flashing Warning
+if (Math.Sin(Time.TotalSeconds * 10) > 0) {
+    DrawText("!! ROOT@CYBERNET !!", new Point(boxX + boxW - 180, boxY + boxH - 40), 14, whiteHot);
+}
+
+// --- 4. HUD DECORATIONS ---
+float radius = 400 + (float)Math.Sin(Time.TotalSeconds)*10;
+for(int i=0; i<3; i++) {
+    float startA = (float)Time.TotalSeconds * 0.5f + i * 2.1f;
+    float rx1 = boxX - 100 + (float)Math.Cos(startA) * radius;
+    float ry1 = boxY + boxH/2 + (float)Math.Sin(startA) * radius;
+    DrawLine(new Point(boxX - 100, boxY + boxH/2), new Point(rx1, ry1), redDim, 4);
+    dc.DrawEllipse(redMid, null, new Point(rx1, ry1), 4, 4);
+}
+
+public class RedlineState {
+    public List<CircuitLine> Circuits = new();
     public List<string> Logs = new();
-    public float GraphTimer = 0;
-    public float MsgTimer = 0;
-    public float HudRotate = 0;
-    public float HexTimer = 0;
-    public int HexIndex = 0;
+    public float WaitTimer = 0;
+    public float HexRotate = 0;
+}
+
+public class CircuitLine {
+    public List<Point> Points = new();
+    public int MaxLength = 5;
+    public float Speed = 200;
+    public Point CurrentPos;
+    public Point CurrentDir;
+    
+    public CircuitLine(Rect bounds) {
+        Random r = new Random();
+        CurrentPos = new Point(r.NextDouble() * bounds.Width, r.NextDouble() * bounds.Height);
+        Points.Add(CurrentPos);
+        PickDirection(r);
+        MaxLength = r.Next(3, 10);
+        Speed = r.Next(300, 1000);
+    }
+    
+    public void PickDirection(Random r) {
+        int d = r.Next(0, 4);
+        if (d==0) CurrentDir = new Point(1, 0);
+        if (d==1) CurrentDir = new Point(-1, 0);
+        if (d==2) CurrentDir = new Point(0, 1);
+        if (d==3) CurrentDir = new Point(0, -1);
+    }
+    
+    public void Update(float dt, Rect bounds) {
+        CurrentPos = new Point(CurrentPos.X + CurrentDir.X * Speed * dt, CurrentPos.Y + CurrentDir.Y * Speed * dt);
+        
+        if (new Random().NextDouble() < 0.05) {
+            Points.Add(CurrentPos);
+            PickDirection(new Random());
+        }
+        
+        if (Points.Count > MaxLength) {
+            Points.RemoveAt(0);
+        }
+        
+        // Wrap
+        if (CurrentPos.X < -50 || CurrentPos.X > bounds.Width + 50 || CurrentPos.Y < -50 || CurrentPos.Y > bounds.Height + 50) {
+            Points.Clear();
+            Random r = new Random();
+            CurrentPos = new Point(r.NextDouble() * bounds.Width, r.NextDouble() * bounds.Height);
+            Points.Add(CurrentPos);
+        }
+    }
+    
+    public void Draw(DrawingContext dc, IBrush dim, IBrush glow, IBrush hot) {
+        if (Points.Count < 1) return;
+        var p = new Pen(dim, 2);
+        for(int i=0; i<Points.Count-1; i++) dc.DrawLine(p, Points[i], Points[i+1]);
+        dc.DrawLine(new Pen(glow, 2), Points[Points.Count-1], CurrentPos);
+        dc.DrawEllipse(hot, null, CurrentPos, 3, 3);
+    }
 }

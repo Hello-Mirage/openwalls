@@ -71,11 +71,6 @@ public partial class MainWindow : Window, IWallpaperDisplay
         {
             _screenWidth = Screens.Primary.Bounds.Width;
             _screenHeight = Screens.Primary.Bounds.Height;
-            
-            // Explicitly set logical window size to match monitor bounds
-            // This prevents Avalonia from centering layout in a smaller logical box
-            Width = _screenWidth;
-            Height = _screenHeight;
         }
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -85,10 +80,14 @@ public partial class MainWindow : Window, IWallpaperDisplay
             {
                 IntPtr hwnd = handle.Handle;
                 ApplyAdvancedStyles(hwnd);
+                
+                // 1. Attach to the deep-hierarchy background
                 WallpaperUtils.AttachToDesktop(hwnd);
+                
+                // 2. Sync size to the actual container
                 ResizeToParent(hwnd);
-                Win32Api.SetWindowPos(hwnd, Win32Api.HWND_BOTTOM, 0, 0, 0, 0, 
-                    Win32Api.SWP_NOMOVE | Win32Api.SWP_NOSIZE | Win32Api.SWP_NOACTIVATE);
+                
+                // 3. Ensure it's shown correctly
                 Win32Api.ShowWindow(hwnd, Win32Api.SW_SHOW);
             }
         }
@@ -122,6 +121,11 @@ public partial class MainWindow : Window, IWallpaperDisplay
             EditClockMenuItem.IsVisible = (preset?.Type == WallpaperType.Clock);
             MainContextMenu.Open(this);
         }
+    }
+
+    private void OnOpenSettingsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (Application.Current is App app) app.ShowSettings();
     }
 
     private void OnEditClockClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
@@ -254,11 +258,28 @@ public partial class MainWindow : Window, IWallpaperDisplay
 
     private void ResizeToParent(IntPtr hwnd)
     {
-        IntPtr desktopHwnd = Win32Api.FindWindow("Progman", string.Empty);
-        if (Win32Api.GetClientRect(desktopHwnd, out Win32Api.RECT rect))
+        // Try to find the correct desktop container (Progman child)
+        IntPtr parent = WallpaperUtils.GetWorkerWHandle();
+        if (parent == IntPtr.Zero) parent = Win32Api.FindWindow("Progman", null!);
+
+        // Get the full Virtual Screen dimensions (covers all monitors)
+        int x = Win32Api.GetSystemMetrics(Win32Api.SM_XVIRTUALSCREEN);
+        int y = Win32Api.GetSystemMetrics(Win32Api.SM_YVIRTUALSCREEN);
+        int w = Win32Api.GetSystemMetrics(Win32Api.SM_CXVIRTUALSCREEN);
+        int h = Win32Api.GetSystemMetrics(Win32Api.SM_CYVIRTUALSCREEN);
+
+        // Fallback to client rect if metrics fail
+        if (w == 0 || h == 0)
         {
-            Win32Api.SetWindowPos(hwnd, IntPtr.Zero, 0, 0, rect.Right - rect.Left, rect.Bottom - rect.Top, Win32Api.SWP_NOACTIVATE);
+            if (Win32Api.GetClientRect(parent, out Win32Api.RECT rect))
+            {
+                w = rect.Right - rect.Left;
+                h = rect.Bottom - rect.Top;
+            }
         }
+
+        // Force the window to fill the entire virtual space and sit explicitly behind icons with HWND_BOTTOM
+        Win32Api.SetWindowPos(hwnd, Win32Api.HWND_BOTTOM, 0, 0, w, h, Win32Api.SWP_NOACTIVATE | Win32Api.SWP_SHOWWINDOW);
     }
 
     protected override void OnClosing(WindowClosingEventArgs e)

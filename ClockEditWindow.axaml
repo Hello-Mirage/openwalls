@@ -16,7 +16,7 @@
             <TextBlock Text="Live Preview Active in Studio" Classes="Body" FontSize="11" Foreground="{StaticResource ElectricLimeBrush}" Opacity="0.8" Margin="0,5,0,0"/>
         </StackPanel>
 
-        <ScrollViewer Grid.Row="1">
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Hidden">
             <StackPanel Spacing="25">
                 <!-- Backdrop Section -->
                 <StackPanel Spacing="10">

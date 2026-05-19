@@ -1,7 +1,2 @@
-{
-  "Id": "deep-space-default",
-  "Name": "Deep Space",
-  "Type": "Procedural",
-  "ProceduralId": "starfield",
-  "ThumbnailPath": "thumbnail.png"
-}
+﻿{"Name": "Deep Space", "Type": "Procedural", "ProceduralId": "starfield","ThumbnailPath": "thumbnail.png"}
+

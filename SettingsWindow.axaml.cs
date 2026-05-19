@@ -119,6 +119,26 @@ public partial class SettingsWindow : Window
         }
     }
 
+    private void OpenFolder_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem item && item.DataContext is WallpaperPreset preset && preset.BaseDirectory != null)
+        {
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = preset.BaseDirectory,
+                    UseShellExecute = true,
+                    Verb = "open"
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error opening folder: {ex.Message}");
+            }
+        }
+    }
+
     private void RefreshLibrary()
     {
         _libraryManager.LoadLibrary();

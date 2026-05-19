@@ -125,6 +125,16 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate DataType="local:WallpaperPreset">
                                         <Button Classes="LofiCard" Margin="10" Padding="0" Background="Transparent" BorderThickness="0" Click="Preset_Click">
+                                            <Button.ContextMenu>
+                                                <ContextMenu>
+                                                    <MenuItem Header="Set as Wallpaper" Click="Preset_Click"/>
+                                                    <MenuItem Header="Edit Clock Settings" Click="EditClockSettings_Click" IsVisible="{Binding IsClock}"/>
+                                                    <MenuItem Header="Set Custom Thumbnail" Click="SetThumbnail_Click"/>
+                                                    <MenuItem Header="Open Folder" Click="OpenFolder_Click"/>
+                                                    <Separator/>
+                                                    <MenuItem Header="Delete" Click="DeletePreset_Click" Foreground="#ff5555"/>
+                                                </ContextMenu>
+                                            </Button.ContextMenu>
                                             <Panel>
                                                 <Border Width="400" Background="{StaticResource SurfaceLowBrush}" CornerRadius="32" ClipToBounds="True">
                                                     <Grid RowDefinitions="*, Auto">
@@ -266,6 +276,16 @@
                                                     <ItemsControl.ItemTemplate>
                                                         <DataTemplate DataType="local:WallpaperPreset">
                                                             <Button Classes="LofiCard" Margin="0" Padding="0" Background="Transparent" BorderThickness="0" Click="Preset_Click">
+                                                                <Button.ContextMenu>
+                                                                    <ContextMenu>
+                                                                        <MenuItem Header="Set as Wallpaper" Click="Preset_Click"/>
+                                                                        <MenuItem Header="Edit Clock Settings" Click="EditClockSettings_Click" IsVisible="{Binding IsClock}"/>
+                                                                        <MenuItem Header="Set Custom Thumbnail" Click="SetThumbnail_Click"/>
+                                                                        <MenuItem Header="Open Folder" Click="OpenFolder_Click"/>
+                                                                        <Separator/>
+                                                                        <MenuItem Header="Delete" Click="DeletePreset_Click" Foreground="#ff5555"/>
+                                                                    </ContextMenu>
+                                                                </Button.ContextMenu>
                                                                 <Panel>
                                                                     <Border Width="300" Background="{StaticResource SurfaceLowBrush}" CornerRadius="24" ClipToBounds="True">
                                                                         <Grid RowDefinitions="*, Auto">

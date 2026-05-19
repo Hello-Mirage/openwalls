@@ -63,6 +63,9 @@ public class WallpaperPreset : INotifyPropertyChanged
     public DateTime DateAdded { get; set; } = DateTime.Now;
 
     [JsonIgnore]
+    public bool IsClock => Type == WallpaperType.Clock;
+
+    [JsonIgnore]
     public bool IsActive 
     { 
         get => _isActive; 

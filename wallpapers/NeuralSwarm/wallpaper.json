@@ -1,7 +1,0 @@
-{
-  "Id": "neural-swarm-default",
-  "Name": "Neural Swarm",
-  "Type": "Procedural",
-  "ProceduralId": "swarm",
-  "ThumbnailPath": "thumbnail.png"
-}

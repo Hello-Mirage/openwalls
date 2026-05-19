@@ -56,6 +56,9 @@ public partial class App : Application
 
             var trayIcons = new TrayIcons { trayIcon };
             TrayIcon.SetIcons(this, trayIcons);
+
+            // Automatically open dashboard settings on launch
+            ShowSettings();
         }
 
         base.OnFrameworkInitializationCompleted();

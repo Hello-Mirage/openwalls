@@ -8,7 +8,7 @@
         x:Class="openwalls.MainWindow"
         Title="openwalls"
         SystemDecorations="None"
-        WindowState="Maximized"
+        WindowState="Normal"
         Background="Transparent"
         Topmost="False"
         ShowInTaskbar="False"
@@ -16,6 +16,7 @@
 
     <Window.ContextMenu>
         <ContextMenu x:Name="MainContextMenu">
+            <MenuItem Header="Open AI Studio" Click="OnOpenSettingsClick"/>
             <MenuItem Header="Edit Clock Settings" Click="OnEditClockClick" x:Name="EditClockMenuItem"/>
             <Separator/>
             <MenuItem Header="Exit" Click="OnExitClick"/>

@@ -10,9 +10,11 @@
 [Oo]bj/
 publish/
 dist/
+msix_build/
 *.zip
 *.exe
 *.msi
+*.msix
 Generated\ Files/
 
 ## [NuGet]

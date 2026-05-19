@@ -8,7 +8,7 @@ public static class WallpaperUtils
 {
     public static void SendWorkerWMessage()
     {
-        IntPtr progman = Win32Api.FindWindow("Progman", string.Empty);
+        IntPtr progman = Win32Api.FindWindow("Progman", null!);
         IntPtr result = IntPtr.Zero;
         
         // Split the desktop layers
@@ -17,44 +17,53 @@ public static class WallpaperUtils
 
     public static IntPtr GetWorkerWHandle()
     {
-        IntPtr progman = Win32Api.FindWindow("Progman", string.Empty);
-        IntPtr workerw = IntPtr.Zero;
-
-        // Strategy 1: Search for WorkerW child of Progman (Windows 11 25H2 / Build 26xxx)
-        workerw = Win32Api.FindWindowEx(progman, IntPtr.Zero, "WorkerW", string.Empty);
+        IntPtr progman = Win32Api.FindWindow("Progman", null!);
         
-        if (workerw != IntPtr.Zero)
-        {
-            Debug.WriteLine("Found 25H2-style background WorkerW (child of Progman).");
-            return workerw;
-        }
+        SendWorkerWMessage(); // Triggers the desktop split
 
-        // Strategy 2: Search for WorkerW sibling of icons (Legacy / Windows 10 / Windows 11 22H2)
-        Win32Api.EnumWindows((hwnd, lParam) =>
-        {
-            IntPtr shellDll = Win32Api.FindWindowEx(hwnd, IntPtr.Zero, "SHELLDLL_DefView", string.Empty);
-            if (shellDll != IntPtr.Zero)
-            {
-                workerw = Win32Api.FindWindowEx(IntPtr.Zero, hwnd, "WorkerW", string.Empty);
+        IntPtr shellDllViewParent = IntPtr.Zero;
+
+        // Look for the top-level window holding SHELLDLL_DefView.
+        Win32Api.EnumWindows((hwnd, lParam) => {
+            IntPtr p = Win32Api.FindWindowEx(hwnd, IntPtr.Zero, "SHELLDLL_DefView", null!);
+            if (p != IntPtr.Zero) {
+                shellDllViewParent = hwnd;
+                return false;
             }
             return true;
         }, IntPtr.Zero);
 
-        if (workerw != IntPtr.Zero)
-        {
-            Debug.WriteLine("Found Legacy-style background WorkerW (sibling of ShellView).");
-            return workerw;
+        if (shellDllViewParent == IntPtr.Zero) {
+            // Absolute fallback for Win 11 Build 26200+ where EnumWindows might skip it
+            IntPtr p = Win32Api.FindWindowEx(progman, IntPtr.Zero, "SHELLDLL_DefView", null!);
+            if (p != IntPtr.Zero) {
+                shellDllViewParent = progman;
+            } else {
+                shellDllViewParent = progman;
+            }
         }
 
-        // Strategy 3: Find any empty WorkerW sibling of Progman
-        workerw = Win32Api.FindWindowEx(IntPtr.Zero, progman, "WorkerW", string.Empty);
-        
-        return workerw;
+        // The background render layer is ALWAYS spawned as the absolute next WorkerW sibling 
+        // immediately underneath the container that holds the icons.
+        IntPtr backgroundWorkerW = Win32Api.FindWindowEx(IntPtr.Zero, shellDllViewParent, "WorkerW", null!);
+
+        if (backgroundWorkerW == IntPtr.Zero)
+        {
+            // Edge Case: If it didn't spawn outside, check if it was spawned INSIDE Progman.
+            backgroundWorkerW = Win32Api.FindWindowEx(progman, IntPtr.Zero, "WorkerW", null!);
+        }
+
+        // Failsafe (usually won't hit this)
+        if (backgroundWorkerW == IntPtr.Zero)
+        {
+            backgroundWorkerW = progman;
+        }
+
+        return backgroundWorkerW;
     }
 
     public static void AttachToDesktop(IntPtr windowHandle)
     {
-        SendWorkerWMessage();
         IntPtr workerw = GetWorkerWHandle();
         
         if (workerw != IntPtr.Zero)

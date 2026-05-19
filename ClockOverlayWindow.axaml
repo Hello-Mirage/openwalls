@@ -3,7 +3,7 @@
         x:Class="openwalls.ClockOverlayWindow"
         Title="Clock Overlay"
         SystemDecorations="None"
-        WindowState="Maximized"
+        WindowState="Normal"
         Background="Transparent"
         TransparencyLevelHint="Transparent"
         Topmost="False"

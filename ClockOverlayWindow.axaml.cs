@@ -20,7 +20,24 @@ public partial class ClockOverlayWindow : Window
         InitializeComponent();
     }
 
-    public void SetParentHandle(IntPtr parent) => _parentHandle = parent;
+    public void SetParentHandle(IntPtr parent)
+    {
+        _parentHandle = parent;
+        if (IsVisible) SyncSize();
+    }
+
+    private void SyncSize()
+    {
+        var handle = TryGetPlatformHandle();
+        if (handle != null && _parentHandle != IntPtr.Zero)
+        {
+            Win32Api.RECT rect;
+            if (Win32Api.GetClientRect(_parentHandle, out rect))
+            {
+                Win32Api.SetWindowPos(handle.Handle, IntPtr.Zero, 0, 0, rect.Right - rect.Left, rect.Bottom - rect.Top, Win32Api.SWP_NOACTIVATE);
+            }
+        }
+    }
 
     protected override void OnOpened(EventArgs e)
     {
