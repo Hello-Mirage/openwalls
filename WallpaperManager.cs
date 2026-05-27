@@ -5,7 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
-using LibVLCSharp.Shared;
+using HanumanInstitute.LibMpv;
 using System.Diagnostics;
 
 namespace openwalls;
@@ -26,8 +26,7 @@ public interface IWallpaperDisplay
 public class WallpaperManager : IDisposable
 {
     private readonly IWallpaperDisplay _display;
-    private readonly LibVLC? _libVLC;
-    private readonly MediaPlayer? _mediaPlayer;
+    private readonly MpvContext? _mpvContext;
     private readonly ProceduralRenderer _proceduralRenderer;
     private readonly ClockOverlayWindow _clockHUD;
     
@@ -35,11 +34,10 @@ public class WallpaperManager : IDisposable
     private Bitmap? _clockBackgroundBitmap;
     private bool _isOptimizationPaused = false;
 
-    public WallpaperManager(IWallpaperDisplay display, LibVLC vlc, MediaPlayer mp, ProceduralRenderer pr, ClockOverlayWindow hud)
+    public WallpaperManager(IWallpaperDisplay display, MpvContext mpv, ProceduralRenderer pr, ClockOverlayWindow hud)
     {
         _display = display;
-        _libVLC = vlc;
-        _mediaPlayer = mp;
+        _mpvContext = mpv;
         _proceduralRenderer = pr;
         _clockHUD = hud;
     }
@@ -48,14 +46,12 @@ public class WallpaperManager : IDisposable
     {
         var preset = config.Library.FirstOrDefault(p => p.Id == config.CurrentPresetId);
         
-        if (_libVLC == null || _mediaPlayer == null) return;
+        if (_mpvContext == null) return;
 
         ResetLayers();
         
         {
-            _mediaPlayer.Stop();
-            _mediaPlayer.AspectRatio = null;
-            _mediaPlayer.CropGeometry = null;
+            _mpvContext.Stop();
         }
         _proceduralRenderer.Stop();
         _isOptimizationPaused = false;
@@ -145,21 +141,13 @@ public class WallpaperManager : IDisposable
 
             try 
             {
-                using var media = new Media(_libVLC!, pathToPlay, FromType.FromPath);
-                media.AddOption(":input-repeat=65535");
-                if (preset.IsMuted) _mediaPlayer!.Mute = true;
+                _mpvContext!.LoadFile(pathToPlay);
+                _mpvContext!.SetPropertyString("loop-file", "inf");
+                _mpvContext!.SetPropertyString("mute", preset.IsMuted ? "yes" : "no");
+                _mpvContext!.SetPropertyString("keepaspect", "no");
+
                 _display.VideoLayer.IsVisible = true;
                 _display.VideoLayer.Opacity = 1;
-                
-                // Force Fill
-                if (_display.DisplayWidth > 0 && _display.DisplayHeight > 0)
-                {
-                    string ratio = $"{_display.DisplayWidth}:{_display.DisplayHeight}";
-                    _mediaPlayer!.AspectRatio = ratio;
-                    _mediaPlayer!.CropGeometry = ratio;
-                }
-
-                _mediaPlayer!.Play(media);
             }
             catch (Exception ex)
             {
@@ -173,19 +161,11 @@ public class WallpaperManager : IDisposable
 
     private void PlaySourceVideo(string videoPath)
     {
-        using var sourceMedia = new Media(_libVLC!, videoPath, FromType.FromPath);
-        sourceMedia.AddOption(":input-repeat=65535");
+        _mpvContext!.LoadFile(videoPath);
+        _mpvContext!.SetPropertyString("loop-file", "inf");
+        _mpvContext!.SetPropertyString("keepaspect", "no");
         _display.VideoLayer.IsVisible = true;
         _display.VideoLayer.Opacity = 1;
-
-        if (_display.DisplayWidth > 0 && _display.DisplayHeight > 0)
-        {
-            string ratio = $"{_display.DisplayWidth}:{_display.DisplayHeight}";
-            _mediaPlayer!.AspectRatio = ratio;
-            _mediaPlayer!.CropGeometry = ratio;
-        }
-
-        _mediaPlayer!.Play(sourceMedia);
     }
 
     private void HandleProceduralWallpaper(WallpaperPreset preset)
@@ -208,20 +188,12 @@ public class WallpaperManager : IDisposable
 
                 try 
                 {
-                    using var media = new Media(_libVLC!, pathToPlay, FromType.FromPath);
-                    media.AddOption(":input-repeat=65535");
-                    _mediaPlayer!.Mute = true;
+                    _mpvContext!.LoadFile(pathToPlay);
+                    _mpvContext!.SetPropertyString("loop-file", "inf");
+                    _mpvContext!.SetPropertyString("mute", "yes");
+                    _mpvContext!.SetPropertyString("keepaspect", "no");
                     _display.VideoLayer.IsVisible = true;
                     _display.VideoLayer.Opacity = 1;
-                    
-                    if (_display.DisplayWidth > 0 && _display.DisplayHeight > 0)
-                    {
-                        string ratio = $"{_display.DisplayWidth}:{_display.DisplayHeight}";
-                        _mediaPlayer!.AspectRatio = ratio;
-                        _mediaPlayer!.CropGeometry = ratio;
-                    }
-
-                    _mediaPlayer!.Play(media);
                 }
                 catch { PlaySourceVideo(videoPath); }
 
@@ -246,7 +218,7 @@ public class WallpaperManager : IDisposable
 
     public void PausePlayback()
     {
-        if (_mediaPlayer?.IsPlaying == true) _mediaPlayer.Stop();
+        _mpvContext?.Stop();
         _proceduralRenderer.Stop(); 
         DisposeBitmaps();
         _isOptimizationPaused = true;
@@ -262,8 +234,7 @@ public class WallpaperManager : IDisposable
 
     public void Dispose()
     {
-        _mediaPlayer?.Dispose();
-        _libVLC?.Dispose();
+        _mpvContext?.Dispose();
         DisposeBitmaps();
     }
 }

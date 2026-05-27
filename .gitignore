@@ -10,12 +10,14 @@
 [Oo]bj/
 publish/
 dist/
+releases/
 msix_build/
 *.zip
 *.exe
 *.msi
 *.msix
 Generated\ Files/
+libmpv-2.dll
 
 ## [NuGet]
 packages/

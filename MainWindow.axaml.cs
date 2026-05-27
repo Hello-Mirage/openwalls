@@ -12,7 +12,7 @@ using Avalonia.Platform;
 using Avalonia.Threading;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
-using LibVLCSharp.Shared;
+using HanumanInstitute.LibMpv;
 
 namespace openwalls;
 
@@ -28,8 +28,7 @@ public class ProceduralCanvas : Control
 
 public partial class MainWindow : Window, IWallpaperDisplay
 {
-    private LibVLC? _libVLC;
-    private MediaPlayer? _mediaPlayer;
+    private MpvContext? _mpvContext;
     private bool _isOptimizationPaused = false;
     private uint _ownProcessId;
     private WallpaperConfig _config = new();
@@ -95,18 +94,15 @@ public partial class MainWindow : Window, IWallpaperDisplay
         _proceduralRenderer = new ProceduralRenderer(ProceduralLayer);
         ProceduralLayer.Renderer = _proceduralRenderer;
 
-        Core.Initialize();
-        _libVLC = new LibVLC("--file-caching=500", "--quiet", "--no-video-title-show");
-        _mediaPlayer = new MediaPlayer(_libVLC);
-        VideoLayer.MediaPlayer = _mediaPlayer;
-
+        _mpvContext = VideoLayer.MpvContext;
+        
         _clockHUD = new ClockOverlayWindow();
         var hudHandle = TryGetPlatformHandle();
         if (hudHandle != null) _clockHUD.SetParentHandle(hudHandle.Handle);
         _clockHUD.Show();
-
+        
         // Initialize Manager
-        _wallpaperManager = new WallpaperManager(this, _libVLC, _mediaPlayer, _proceduralRenderer, _clockHUD);
+        _wallpaperManager = new WallpaperManager(this, _mpvContext, _proceduralRenderer, _clockHUD);
 
         // Background Optimization logic handled by VideoOptimizer
         StartBackgroundOptimization();

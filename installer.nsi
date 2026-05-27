@@ -35,7 +35,7 @@ RequestExecutionLevel admin
 !insertmacro MUI_LANGUAGE "English"
 
 Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
-OutFile "Openwalls_Alpha1_Setup.exe"
+OutFile "releases\Openwalls_Alpha1_Setup.exe"
 InstallDir "$LOCALAPPDATA\Openwalls"
 InstallDirRegKey HKCU "${PRODUCT_DIR_REGKEY}" ""
 ShowInstDetails show
@@ -91,7 +91,7 @@ Section "Uninstall"
   Delete "$INSTDIR\openwalls.pdb"
   
   RMDir /r "$INSTDIR\assets"
-  RMDir /r "$INSTDIR\libvlc"
+  Delete "$INSTDIR\libmpv-2.dll"
   RMDir /r "$INSTDIR\wallpapers"
   
   Delete "$SMPROGRAMS\Openwalls\Uninstall.lnk"
